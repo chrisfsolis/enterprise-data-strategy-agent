@@ -54,3 +54,22 @@ The `plan` CLI command runs the full read-only flow:
 6. Generate a markdown execution plan and optional JSON backlog.
 
 This keeps remediation advisory and explainable. The agent recommends work, owners, stakeholders, success measures, and timing, but it does not automatically edit source BI assets, datasets, permissions, or workflows.
+
+## Web UI Layer
+
+The Streamlit UI is a thin orchestration layer on top of the CLI-first strategy engine. It is intentionally kept lightweight so the reusable business logic remains in importable modules rather than in browser-rendering code.
+
+- `app.py` is the root Streamlit entry point and imports the packaged UI runner.
+- `src/enterprise_data_strategy_agent/ui/streamlit_app.py` renders the browser experience, sidebar selectors, tabs, previews, and download buttons.
+- `src/enterprise_data_strategy_agent/ui/__init__.py` provides small, testable UI helper functions that load samples, parse uploads, summarize metadata, format table rows, and generate report artifacts.
+
+The UI sits above the existing architecture:
+
+1. **Inventory loading** — bundled sample metadata is loaded through the existing sample loader and connector path; uploaded JSON is parsed and validated through the inventory model validation helpers.
+2. **Policy loading** — the default policy, bundled sample policy, or uploaded YAML policy are loaded through the existing strategy policy loader.
+3. **Linting** — metadata findings are produced by `lint_inventory` and rendered as metrics, filterable tables, and markdown report previews.
+4. **Analysis/scoring** — health scores, top risks, and the strategy brief are produced by the existing analyzer and report generator.
+5. **Remediation planning** — the remediation backlog, summary dimensions, markdown plan, and JSON backlog come from the existing planning and backlog modules.
+6. **Report generation** — the UI exposes generated markdown and JSON artifacts as browser previews and download buttons without changing the report-generation logic.
+
+The UI does not require credentials, does not call real Domo APIs, and does not modify Domo, Snowflake, BI tools, catalogs, or any other source platform. Domo-style metadata remains the first reference implementation for the current release.

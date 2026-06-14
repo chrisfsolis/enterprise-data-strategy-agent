@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 authors = [{name = "Enterprise Data Strategy Agent Contributors"}]
-dependencies = []
+dependencies = ["streamlit>=1.36"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0"]

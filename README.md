@@ -230,3 +230,40 @@ Example remediation item:
 Remediation planning matters because enterprise data managers need more than a list of problems. They need a sequenced backlog they can review with Finance, Sales, Operations, Compliance, BI admins, and executive sponsors. The plan makes governance work discussable, assignable, and measurable.
 
 The tool is advisory and read-only. It does not make changes to Domo or any other platform.
+
+## Run the Web UI
+
+The project includes a lightweight Streamlit interface for demoing the metadata governance, strategy brief, and remediation planning workflows to enterprise data managers, analytics leaders, Domo admins, and non-technical stakeholders.
+
+### Install
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+For editable development installs, you can also run:
+
+```bash
+python -m pip install -e .
+```
+
+### Launch
+
+```bash
+streamlit run app.py
+```
+
+### What the UI supports
+
+- Use the bundled synthetic sample inventory from `data/sample_domo_inventory.json`.
+- Upload a custom Domo-style JSON metadata inventory.
+- Use the default policy, bundled sample policy from `config/sample_strategy_policy.yml`, or an uploaded YAML policy.
+- Run metadata linting, enterprise data strategy analysis/scoring, and remediation planning from the browser.
+- Preview the generated metadata lint report, enterprise data strategy brief, remediation plan, and remediation backlog.
+- Download the strategy brief markdown, lint report markdown, remediation plan markdown, and backlog JSON.
+
+### Screenshot
+
+_Screenshot placeholder: add a screenshot of the Streamlit Overview tab after launching `streamlit run app.py`._
+
+The included sample data is synthetic and Domo-style only. This repository is independent and unofficial, does not require real Domo credentials, and does not modify Domo or any other source platform.
