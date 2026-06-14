@@ -5,6 +5,44 @@ from enterprise_data_strategy_agent.sample_loader import load_sample_inventory
 from enterprise_data_strategy_agent.validation import lint_inventory
 
 
+def _valid_inventory_payload(certified_dataset=True, certified_dashboard=False):
+    return {
+        "platform": "test",
+        "generated_at": "2026-06-14",
+        "datasets": [
+            {
+                "id": "ds_bool",
+                "name": "Boolean Dataset",
+                "business_domain": "Finance",
+                "owner": "Owner",
+                "department": "Finance",
+                "refresh_cadence": "daily",
+                "last_refreshed": "2026-06-14",
+                "certified": certified_dataset,
+                "row_count": 10,
+                "sensitivity_level": "internal",
+                "usage_level": "low",
+                "business_criticality": "medium",
+            }
+        ],
+        "dashboards": [
+            {
+                "id": "dash_bool",
+                "title": "Boolean Dashboard",
+                "type": "dashboard",
+                "business_domain": "Finance",
+                "owner": "Owner",
+                "department": "Finance",
+                "certified": certified_dashboard,
+                "usage_level": "low",
+                "business_criticality": "medium",
+                "dataset_ids": ["ds_bool"],
+                "audience": "Finance",
+            }
+        ],
+    }
+
+
 def test_lint_inventory_reports_metadata_quality_findings():
     inventory = load_sample_inventory("data/sample_domo_inventory.json")
     generated = inventory.generated_at
@@ -114,3 +152,39 @@ def test_structural_parser_allows_missing_row_count_for_linting():
 
     assert inventory.datasets[0].row_count is None
     assert any("row count is missing" in finding.message for finding in lint_inventory(inventory))
+
+
+def test_validate_inventory_payload_accepts_json_boolean_certified_values():
+    inventory = validate_inventory_payload(_valid_inventory_payload(True, False))
+
+    assert inventory.datasets[0].certified is True
+    assert inventory.dashboards[0].certified is False
+
+    inventory = validate_inventory_payload(_valid_inventory_payload(False, True))
+
+    assert inventory.datasets[0].certified is False
+    assert inventory.dashboards[0].certified is True
+
+
+def test_validate_inventory_payload_rejects_non_boolean_dataset_certified_values():
+    for certified in ("false", "true", 0, 1):
+        payload = _valid_inventory_payload(certified_dataset=certified)
+
+        try:
+            validate_inventory_payload(payload)
+        except ValueError as exc:
+            assert "Dataset ds_bool certified must be a boolean" in str(exc)
+        else:
+            raise AssertionError(f"Expected ValueError for dataset certified={certified!r}")
+
+
+def test_validate_inventory_payload_rejects_non_boolean_dashboard_certified_values():
+    for certified in ("false", "true", 0, 1):
+        payload = _valid_inventory_payload(certified_dashboard=certified)
+
+        try:
+            validate_inventory_payload(payload)
+        except ValueError as exc:
+            assert "Dashboard dash_bool certified must be a boolean" in str(exc)
+        else:
+            raise AssertionError(f"Expected ValueError for dashboard certified={certified!r}")

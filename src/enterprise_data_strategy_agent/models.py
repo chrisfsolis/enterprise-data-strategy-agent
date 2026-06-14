@@ -84,6 +84,8 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
 
     datasets: list[Dataset] = []
     for raw in payload["datasets"]:
+        if not isinstance(raw["certified"], bool):
+            raise ValueError(f"Dataset {raw['id']} certified must be a boolean")
         metrics = [CalculatedMetric(**metric) for metric in raw.get("calculated_metrics", [])]
         datasets.append(
             Dataset(
@@ -94,7 +96,7 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
                 department=raw["department"],
                 refresh_cadence=raw["refresh_cadence"].lower(),
                 last_refreshed=_parse_date(raw["last_refreshed"]),  # type: ignore[arg-type]
-                certified=bool(raw["certified"]),
+                certified=raw["certified"],
                 row_count=int(raw["row_count"]) if raw.get("row_count") is not None else None,
                 sensitivity_level=raw["sensitivity_level"].lower(),
                 usage_level=raw["usage_level"].lower(),
@@ -111,6 +113,8 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
         unknown = set(raw["dataset_ids"]).difference(dataset_ids)
         if unknown:
             raise ValueError(f"Dashboard {raw['id']} references unknown datasets: {sorted(unknown)}")
+        if not isinstance(raw["certified"], bool):
+            raise ValueError(f"Dashboard {raw['id']} certified must be a boolean")
         dashboards.append(
             Dashboard(
                 id=raw["id"],
@@ -119,7 +123,7 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
                 business_domain=raw["business_domain"],
                 owner=raw.get("owner"),
                 department=raw["department"],
-                certified=bool(raw["certified"]),
+                certified=raw["certified"],
                 usage_level=raw["usage_level"].lower(),
                 business_criticality=raw["business_criticality"].lower(),
                 dataset_ids=list(raw["dataset_ids"]),
