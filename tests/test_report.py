@@ -23,3 +23,5 @@ def test_report_contains_expected_sections_and_disclaimer():
     ]:
         assert section in report
     assert "not affiliated with, endorsed by, or sponsored by Domo" in report
+    assert "Why:" in report
+    assert "penalty" in report or "bonus" in report

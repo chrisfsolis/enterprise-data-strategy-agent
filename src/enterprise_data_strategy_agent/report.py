@@ -22,12 +22,7 @@ def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult) -> 
         f"This version analyzes synthetic metadata from the {inventory.platform} for datasets, cards, dashboards, owners, certification, calculated metrics, sensitivity, usage, and refresh patterns. {DISCLAIMER}",
         "",
         "## Health Scores",
-        f"- Overall enterprise data strategy health: **{s.overall}/100**",
-        f"- Governance score: **{s.governance}/100**",
-        f"- Trust score: **{s.trust}/100**",
-        f"- Freshness score: **{s.freshness}/100**",
-        f"- Ownership score: **{s.ownership}/100**",
-        f"- Executive reporting risk score: **{s.executive_reporting_risk}/100**",
+        *_score_lines(analysis),
         "",
         "## Top Findings",
         *_bullets(analysis.top_risks),
@@ -72,4 +67,27 @@ def _plan(plan: dict[str, list[str]]) -> list[str]:
     for period, items in plan.items():
         lines.append(f"### {period}")
         lines.extend(_bullets(items))
+    return lines
+
+
+def _score_lines(analysis: AnalysisResult) -> list[str]:
+    labels = {
+        "overall": "Overall enterprise data strategy health",
+        "governance": "Governance score",
+        "trust": "Trust score",
+        "freshness": "Freshness score",
+        "ownership": "Ownership score",
+        "executive_reporting_risk": "Executive reporting risk score",
+    }
+    lines: list[str] = []
+    for name, label in labels.items():
+        score = getattr(analysis.scores, name)
+        explanation = analysis.score_explanations.get(name)
+        lines.append(f"- {label}: **{score}/100**")
+        if explanation:
+            lines.append(f"  - Why: {explanation.rationale}")
+            material_factors = [factor for factor in explanation.penalties_or_bonuses if factor.points]
+            for factor in material_factors:
+                direction = "bonus" if factor.points > 0 else "penalty"
+                lines.append(f"  - {factor.name}: {direction} {factor.points:+.1f} points — {factor.rationale}")
     return lines

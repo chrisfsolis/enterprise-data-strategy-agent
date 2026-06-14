@@ -5,8 +5,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from itertools import combinations
 
+from enterprise_data_strategy_agent.config import CRITICALITY_LEVELS, HIGH_SENSITIVITY
 from enterprise_data_strategy_agent.models import Inventory
-from enterprise_data_strategy_agent.scoring import HealthScores, calculate_scores, is_stale
+from enterprise_data_strategy_agent.scoring import HealthScores, ScoreExplanation, calculate_scores, explain_scores, is_stale
 
 
 @dataclass(frozen=True)
@@ -14,6 +15,7 @@ class AnalysisResult:
     """Structured findings produced by the analyzer."""
 
     scores: HealthScores
+    score_explanations: dict[str, ScoreExplanation] = field(default_factory=dict)
     top_risks: list[str] = field(default_factory=list)
     quick_wins: list[str] = field(default_factory=list)
     actions_30_60_90: dict[str, list[str]] = field(default_factory=dict)
@@ -29,10 +31,11 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
     """Analyze metadata and return practical strategy recommendations."""
 
     scores = calculate_scores(inventory)
+    score_explanations = explain_scores(inventory)
     dataset_by_id = {dataset.id: dataset for dataset in inventory.datasets}
     stale_datasets = [dataset.name for dataset in inventory.datasets if is_stale(dataset, inventory.generated_at)]
     missing_owner_assets = [asset.name if hasattr(asset, "name") else asset.title for asset in [*inventory.datasets, *inventory.dashboards] if not asset.owner]
-    sensitive_gaps = [dataset.name for dataset in inventory.datasets if dataset.sensitivity_level in {"confidential", "restricted"} and not dataset.steward]
+    sensitive_gaps = [dataset.name for dataset in inventory.datasets if dataset.sensitivity_level in HIGH_SENSITIVITY and not dataset.steward]
     duplicate_metrics = _find_duplicate_metrics(inventory)
 
     risky_dashboards = []
@@ -47,7 +50,7 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
             reasons.append("uses uncertified datasets")
         if any(is_stale(dataset, inventory.generated_at) for dataset in related):
             reasons.append("powered by stale data")
-        if reasons and (dashboard.business_criticality == "critical" or "executive" in dashboard.audience.lower()):
+        if reasons and (dashboard.business_criticality in CRITICALITY_LEVELS or "executive" in dashboard.audience.lower()):
             risky_dashboards.append(f"{dashboard.title}: {', '.join(reasons)}")
 
     top_risks = []
@@ -107,7 +110,7 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
         "Meet security and governance owners to clarify stewardship for sensitive data.",
     ]
 
-    return AnalysisResult(scores, top_risks, quick_wins, actions, products, improvements, conversations, risky_dashboards, stale_datasets, duplicate_metrics)
+    return AnalysisResult(scores, score_explanations, top_risks, quick_wins, actions, products, improvements, conversations, risky_dashboards, stale_datasets, duplicate_metrics)
 
 
 def _find_duplicate_metrics(inventory: Inventory) -> list[str]:
