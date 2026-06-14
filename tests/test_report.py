@@ -56,3 +56,17 @@ def test_analyze_report_includes_metadata_lint_summary():
 
     assert "## Metadata Lint Summary" in report
     assert "Total lint findings" in report
+
+
+def test_analyze_report_includes_remediation_planning_snapshot():
+    from pathlib import Path
+    from enterprise_data_strategy_agent.analyzer import analyze_inventory
+    from enterprise_data_strategy_agent.connectors.domo_mock import DomoMockConnector
+    from enterprise_data_strategy_agent.report import generate_markdown_report
+
+    inventory = DomoMockConnector().load_inventory(Path("data/sample_domo_inventory.json"))
+    report = generate_markdown_report(inventory, analyze_inventory(inventory))
+
+    assert "## Remediation Planning Snapshot" in report
+    assert "P0/P1 remediation items" in report
+    assert "enterprise-data-strategy-agent plan" in report

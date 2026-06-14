@@ -39,3 +39,18 @@ Policy-aware components include:
 - **Reports**: include policy context so readers know whether default or organization-specific assumptions were applied.
 
 If no `--config` argument is provided, the agent uses built-in defaults to preserve backward-compatible behavior for demos and existing automation.
+
+## Remediation planning layer
+
+The remediation planning layer sits after validation, linting, analysis, and scoring. `planning.py` consumes the parsed inventory, policy-aware analysis result, lint findings, and score explanations, then produces a prioritized remediation backlog. `backlog.py` defines the `RemediationItem` model and summary helpers used by markdown and JSON outputs.
+
+The `plan` CLI command runs the full read-only flow:
+
+1. Load and structurally validate inventory metadata.
+2. Load default policy settings or an optional policy file.
+3. Run metadata linting.
+4. Run strategy analysis and scoring.
+5. Convert findings into a prioritized remediation backlog.
+6. Generate a markdown execution plan and optional JSON backlog.
+
+This keeps remediation advisory and explainable. The agent recommends work, owners, stakeholders, success measures, and timing, but it does not automatically edit source BI assets, datasets, permissions, or workflows.

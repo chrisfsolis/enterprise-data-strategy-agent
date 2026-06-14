@@ -180,3 +180,53 @@ severity_overrides:
 ```
 
 Different organizations may have different freshness, certification, ownership, sensitivity, and reporting-risk expectations. Use `config/sample_strategy_policy.yml` as a starting point and adjust thresholds, scoring weights, severity overrides, trusted data product domains, and stakeholder roles to match your operating model.
+
+## Remediation planning
+
+The `plan` command turns lint findings, strategy risks, and score gaps into an executable remediation backlog for enterprise data managers:
+
+```bash
+enterprise-data-strategy-agent plan \
+  --input data/sample_domo_inventory.json \
+  --output examples/generated_remediation_plan.md
+```
+
+Use the same policy file as analysis and linting:
+
+```bash
+enterprise-data-strategy-agent plan \
+  --input data/sample_domo_inventory.json \
+  --output examples/generated_remediation_plan.md \
+  --config config/sample_strategy_policy.yml
+```
+
+Generate both markdown and machine-readable JSON:
+
+```bash
+enterprise-data-strategy-agent plan \
+  --input data/sample_domo_inventory.json \
+  --output examples/generated_remediation_plan.md \
+  --json-output examples/generated_remediation_backlog.json \
+  --config config/sample_strategy_policy.yml
+```
+
+### How lint, analyze, and plan work together
+
+1. `lint` performs a focused metadata-quality and governance check with rule IDs, severities, and recommendations.
+2. `analyze` combines lint findings with strategic scoring, top risks, trusted data product opportunities, and a strategy brief.
+3. `plan` converts those findings into prioritized remediation items with owners, stakeholders, effort, impact, time horizon, recommended actions, and success measures.
+
+Example remediation item:
+
+```markdown
+- REM-001: Review and remediate stale dataset
+  - Priority: P0 or P1 depending on severity, executive reporting use, and business criticality
+  - Owner: Enterprise Data Manager
+  - Supporting stakeholders: Domo Admin, domain business owner, executive sponsor when relevant
+  - Recommended action: Confirm whether the dataset is still required, refresh it, define an SLA, or retire dependent reporting.
+  - Success measure: Stale executive or high-criticality datasets remediated or formally retired.
+```
+
+Remediation planning matters because enterprise data managers need more than a list of problems. They need a sequenced backlog they can review with Finance, Sales, Operations, Compliance, BI admins, and executive sponsors. The plan makes governance work discussable, assignable, and measurable.
+
+The tool is advisory and read-only. It does not make changes to Domo or any other platform.

@@ -104,3 +104,36 @@ def test_lint_command_succeeds_with_findings_and_writes_report(tmp_path, capsys)
     report = output_path.read_text(encoding="utf-8")
     assert "# Enterprise Data Metadata Lint Report" in report
     assert "## Recommended Fix Order" in report
+
+
+def test_plan_command_writes_markdown_and_json_with_config(tmp_path, capsys):
+    markdown = tmp_path / "plan.md"
+    backlog = tmp_path / "backlog.json"
+
+    result = main([
+        "plan",
+        "--input", str(DEFAULT_INPUT_PATH),
+        "--output", str(markdown),
+        "--json-output", str(backlog),
+        "--config", "config/sample_strategy_policy.yml",
+    ])
+
+    assert result == 0
+    assert "Enterprise data remediation plan generated" in capsys.readouterr().out
+    plan = markdown.read_text(encoding="utf-8")
+    assert "# Enterprise Data Remediation Plan" in plan
+    assert "## Executive Summary" in plan
+    assert "## P0 Immediate Actions" in plan
+    assert "## 30/60/90 Day Execution Plan" in plan
+    payload = json.loads(backlog.read_text(encoding="utf-8"))
+    assert payload["remediation_items"]
+    assert payload["summary"]["total_items"] == len(payload["remediation_items"])
+
+
+def test_plan_command_works_without_config(tmp_path):
+    markdown = tmp_path / "plan.md"
+
+    result = main(["plan", "--input", str(DEFAULT_INPUT_PATH), "--output", str(markdown)])
+
+    assert result == 0
+    assert "Custom policy used: no" in markdown.read_text(encoding="utf-8")

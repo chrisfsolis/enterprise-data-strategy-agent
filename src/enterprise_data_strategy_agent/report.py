@@ -5,6 +5,7 @@ from __future__ import annotations
 from enterprise_data_strategy_agent.analyzer import AnalysisResult
 from enterprise_data_strategy_agent.models import Inventory
 from enterprise_data_strategy_agent.policy import DEFAULT_POLICY, StrategyPolicy
+from enterprise_data_strategy_agent.planning import build_remediation_backlog, most_urgent_theme, recommended_first_action
 
 DISCLAIMER = "This project is independent and is not affiliated with, endorsed by, or sponsored by Domo. Domo-style metadata is used only as the first reference implementation."
 
@@ -41,6 +42,9 @@ def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult, pol
         "",
         "## Metadata Lint Summary",
         *_lint_summary_lines(analysis),
+        "",
+        "## Remediation Planning Snapshot",
+        *_remediation_snapshot_lines(inventory, analysis, active_policy),
         "",
         "## Metadata Quality Lint Findings",
         *_lint_detail_lines(analysis),
@@ -139,4 +143,15 @@ def _policy_context_lines(policy: StrategyPolicy) -> list[str]:
         f"- Strategy owner role: {policy.organization.strategy_owner_role}",
         f"- Policy source: {source}",
         f"- Major assumptions: daily datasets stale after {policy.freshness_thresholds.daily_dataset_stale_after_days} days; weekly after {policy.freshness_thresholds.weekly_dataset_stale_after_days} days; monthly after {policy.freshness_thresholds.monthly_dataset_stale_after_days} days; manual datasets reviewed after {policy.freshness_thresholds.manual_dataset_review_after_days} days; high-row-count datasets start at {policy.usage_thresholds.high_row_count_threshold:,} rows; executive certification required is {policy.risk_thresholds.executive_dashboard_minimum_certification_required}.",
+    ]
+
+
+def _remediation_snapshot_lines(inventory: Inventory, analysis: AnalysisResult, policy: StrategyPolicy) -> list[str]:
+    items = build_remediation_backlog(inventory, analysis, policy)
+    urgent = [item for item in items if item.priority in {"P0", "P1"}]
+    return [
+        f"- P0/P1 remediation items: **{len(urgent)}**",
+        f"- Most urgent remediation theme: {most_urgent_theme(items)}",
+        f"- Recommended first action: {recommended_first_action(items)}",
+        "- Generate the full executable backlog with `enterprise-data-strategy-agent plan --input data/sample_domo_inventory.json --output examples/generated_remediation_plan.md`.",
     ]
