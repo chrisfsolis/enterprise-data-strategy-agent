@@ -8,7 +8,7 @@ from itertools import combinations
 from enterprise_data_strategy_agent.config import CRITICALITY_LEVELS, HIGH_SENSITIVITY
 from enterprise_data_strategy_agent.models import Inventory
 from enterprise_data_strategy_agent.scoring import HealthScores, ScoreExplanation, calculate_scores, explain_scores, is_stale
-from enterprise_data_strategy_agent.validation import LintFinding, lint_inventory
+from enterprise_data_strategy_agent.linting import LintFinding, lint_inventory
 
 
 @dataclass(frozen=True)

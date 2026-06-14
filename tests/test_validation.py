@@ -164,3 +164,26 @@ def test_structural_parser_allows_dashboard_missing_dataset_reference_for_lintin
 
     assert inventory.dashboards[0].dataset_ids == ["ds_not_loaded"]
     assert any("Dashboard references missing datasets: ds_not_loaded" in finding.message for finding in lint_inventory(inventory))
+
+def test_lint_findings_include_user_facing_fields():
+    inventory = load_sample_inventory("data/sample_domo_inventory.json")
+    broken_dashboard = Dashboard(
+        id="dash_missing_dataset_fields",
+        title="Missing Dataset Fields",
+        type="dashboard",
+        business_domain="Executive Reporting",
+        owner="Analyst",
+        department="Executive",
+        certified=True,
+        usage_level="high",
+        business_criticality="critical",
+        dataset_ids=["ds_missing_from_inventory"],
+        audience="Executive Leadership",
+    )
+    findings = lint_inventory(replace(inventory, dashboards=[broken_dashboard]))
+
+    finding = next(finding for finding in findings if finding.rule_id == "LINT001")
+    assert finding.severity in {"critical", "high", "medium", "low"}
+    assert finding.rule_id
+    assert finding.recommendation
+    assert finding.affected_object_type == "dashboard"

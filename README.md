@@ -8,6 +8,8 @@ A free, open-source enterprise data strategy assistant that uses synthetic Domo-
 
 The agent reviews enterprise analytics metadata and generates a practical markdown strategy brief. It looks for stale data, uncertified executive assets, owner gaps, duplicate metrics, inconsistent names, weak stewardship, high-value dashboards using uncertified datasets, and opportunities to formalize trusted data products.
 
+It also includes a dedicated metadata lint command so enterprise data managers can run a fast governance quality check before generating a full strategy report.
+
 ## Who this is for
 
 - Enterprise data managers and analytics leaders
@@ -54,15 +56,55 @@ In the browser, upload an inventory JSON file such as `data/sample_domo_inventor
 
 ## Run
 
+Generate the full enterprise data strategy brief:
+
 ```bash
 enterprise-data-strategy-agent analyze --input data/sample_domo_inventory.json --output examples/generated_strategy_brief.md
 ```
 
-Example output:
+Run the standalone metadata lint check:
+
+```bash
+enterprise-data-strategy-agent lint --input data/sample_domo_inventory.json
+```
+
+Optionally write a markdown lint report:
+
+```bash
+enterprise-data-strategy-agent lint --input data/sample_domo_inventory.json --output examples/generated_lint_report.md
+```
+
+Example analyze output:
 
 ```text
-Enterprise data strategy brief generated: examples/generated_strategy_brief.md
+Enterprise data strategy markdown output generated: examples/generated_strategy_brief.md
 ```
+
+Example lint output:
+
+```text
+Inventory structural validation passed: data/sample_domo_inventory.json
+Datasets: 8
+Dashboards/cards: 8
+Metadata lint summary:
+- Total findings: ...
+- Critical: ...
+- High: ...
+- Medium: ...
+- Low: ...
+```
+
+## Validation vs. linting
+
+Structural validation answers: “Is this inventory payload shaped correctly enough to parse?” It rejects malformed JSON, missing required top-level sections, invalid dates, and fields that cannot be converted into the typed inventory model.
+
+Metadata linting answers: “Does this parsed inventory reveal business, quality, or governance issues?” Lint findings are advisory and do not block parsing. For example, dashboards/cards may reference dataset IDs that are not present in the inventory. That is valid structure, but the lint command reports it as a governance issue so a data manager can fix missing lineage or stale references.
+
+Lint findings include severity levels (`critical`, `high`, `medium`, and `low`), a rule ID, affected object details, and a practical recommendation. Rules cover missing upstream datasets, missing owners, executive dashboards using uncertified datasets, sensitive data without stewardship, stale data, manually refreshed critical reporting paths, duplicate metrics, high-row-count/low-usage datasets, certified dashboards with uncertified dependencies, orphan dashboards, and unused datasets.
+
+## Why linting matters for enterprise data managers
+
+Metadata linting gives data managers a pre-flight governance checklist before a full strategy report or executive review. It helps prioritize fixes that improve trust in leadership reporting, clarify ownership, reduce risk around sensitive data, and identify cleanup opportunities without modifying the source BI or data platform. This version uses synthetic Domo-style metadata as a reference implementation and is not an official Domo product.
 
 ## Example report snippet
 
