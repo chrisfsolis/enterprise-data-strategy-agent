@@ -14,6 +14,7 @@ def test_report_contains_expected_sections_and_disclaimer():
         "## Top Findings",
         "## Governance Gaps",
         "## Data Quality and Trust Issues",
+        "## Metadata Quality Lint Findings",
         "## Dashboard and Reporting Risk",
         "## Trusted Data Product Opportunities",
         "## Recommended 30/60/90 Day Plan",
@@ -25,3 +26,5 @@ def test_report_contains_expected_sections_and_disclaimer():
     assert "not affiliated with, endorsed by, or sponsored by Domo" in report
     assert "Why:" in report
     assert "penalty" in report or "bonus" in report
+    assert "Strategic trust findings below are generated separately" in report
+    assert "Recommended action:" in report

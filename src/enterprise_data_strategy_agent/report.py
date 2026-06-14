@@ -31,7 +31,11 @@ def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult) -> 
         *_bullets(analysis.governance_improvements),
         "",
         "## Data Quality and Trust Issues",
+        "Strategic trust findings below are generated separately from the metadata-quality lint results that follow.",
         *_bullets([*(f"Stale dataset: {name}" for name in analysis.stale_datasets), *(f"Duplicate metric candidate: {name}" for name in analysis.duplicate_metrics), "Manual refreshes and inconsistent calculation names should be treated as trust risks, not only operational cleanup."]),
+        "",
+        "## Metadata Quality Lint Findings",
+        *_lint_lines(analysis),
         "",
         "## Dashboard and Reporting Risk",
         *_bullets(analysis.risky_dashboards or ["No critical dashboard risks were detected in the sample inventory."]),
@@ -91,3 +95,12 @@ def _score_lines(analysis: AnalysisResult) -> list[str]:
                 direction = "bonus" if factor.points > 0 else "penalty"
                 lines.append(f"  - {factor.name}: {direction} {factor.points:+.1f} points — {factor.rationale}")
     return lines
+
+
+def _lint_lines(analysis: AnalysisResult) -> list[str]:
+    if not analysis.lint_findings:
+        return ["- No metadata-quality lint findings were detected."]
+    return [
+        f"- **{finding.severity.upper()}** {finding.asset_type} `{finding.asset_id}`: {finding.message} Recommended action: {finding.recommended_action}"
+        for finding in analysis.lint_findings
+    ]
