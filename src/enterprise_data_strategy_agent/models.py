@@ -105,12 +105,8 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
             )
         )
 
-    dataset_ids = {dataset.id for dataset in datasets}
     dashboards: list[Dashboard] = []
     for raw in payload["dashboards"]:
-        unknown = set(raw["dataset_ids"]).difference(dataset_ids)
-        if unknown:
-            raise ValueError(f"Dashboard {raw['id']} references unknown datasets: {sorted(unknown)}")
         dashboards.append(
             Dashboard(
                 id=raw["id"],
