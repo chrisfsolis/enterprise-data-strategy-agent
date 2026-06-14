@@ -92,6 +92,18 @@ def lint_inventory(inventory: Inventory) -> list[LintFinding]:
         if not dashboard.dataset_ids:
             findings.append(LintFinding("warning", "dashboard", dashboard.id, "Dashboard has no dataset_ids.", "Attach at least one upstream dataset or remove the orphaned dashboard metadata."))
 
+        missing_dataset_ids = [dataset_id for dataset_id in dashboard.dataset_ids if dataset_id not in dataset_by_id]
+        if missing_dataset_ids:
+            findings.append(
+                LintFinding(
+                    "error",
+                    "dashboard",
+                    dashboard.id,
+                    f"Dashboard references missing datasets: {', '.join(missing_dataset_ids)}.",
+                    "Add the referenced datasets to inventory.datasets or remove stale dashboard dataset_ids.",
+                )
+            )
+
         uncertified = [dataset_by_id[dataset_id].id for dataset_id in dashboard.dataset_ids if dataset_id in dataset_by_id and not dataset_by_id[dataset_id].certified]
         if dashboard.certified and uncertified:
             findings.append(LintFinding("warning", "dashboard", dashboard.id, f"Certified dashboard is backed by uncertified datasets: {', '.join(uncertified)}.", "Certify upstream datasets or remove dashboard certification until dependencies are trusted."))

@@ -43,7 +43,8 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
 
     risky_dashboards = []
     for dashboard in inventory.dashboards:
-        related = [dataset_by_id[dataset_id] for dataset_id in dashboard.dataset_ids]
+        related = [dataset_by_id[dataset_id] for dataset_id in dashboard.dataset_ids if dataset_id in dataset_by_id]
+        missing_dataset_ids = [dataset_id for dataset_id in dashboard.dataset_ids if dataset_id not in dataset_by_id]
         reasons = []
         if not dashboard.certified:
             reasons.append("uncertified")
@@ -53,6 +54,8 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
             reasons.append("uses uncertified datasets")
         if any(is_stale(dataset, inventory.generated_at) for dataset in related):
             reasons.append("powered by stale data")
+        if missing_dataset_ids:
+            reasons.append(f"references missing datasets: {', '.join(missing_dataset_ids)}")
         if reasons and (dashboard.business_criticality in CRITICALITY_LEVELS or "executive" in dashboard.audience.lower()):
             risky_dashboards.append(f"{dashboard.title}: {', '.join(reasons)}")
 

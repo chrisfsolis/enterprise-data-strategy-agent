@@ -105,10 +105,12 @@ def _calculate_scorecard(inventory: Inventory) -> tuple[HealthScores, dict[str, 
     dataset_by_id = {dataset.id: dataset for dataset in datasets}
     risky_exec = 0
     for dashboard in dashboards:
-        related = [dataset_by_id[dataset_id] for dataset_id in dashboard.dataset_ids]
+        related = [dataset_by_id[dataset_id] for dataset_id in dashboard.dataset_ids if dataset_id in dataset_by_id]
+        missing_dataset_ids = [dataset_id for dataset_id in dashboard.dataset_ids if dataset_id not in dataset_by_id]
         if _is_executive(dashboard) and (
             not dashboard.certified
             or not dashboard.owner
+            or bool(missing_dataset_ids)
             or any(is_stale(dataset, inventory.generated_at) or not dataset.certified for dataset in related)
         ):
             risky_exec += 1

@@ -114,3 +114,25 @@ def test_structural_parser_allows_missing_row_count_for_linting():
 
     assert inventory.datasets[0].row_count is None
     assert any("row count is missing" in finding.message for finding in lint_inventory(inventory))
+
+
+def test_lint_inventory_reports_dashboard_missing_dataset_reference():
+    inventory = load_sample_inventory("data/sample_domo_inventory.json")
+    broken_dashboard = Dashboard(
+        id="dash_missing_dataset",
+        title="Missing Dataset Dashboard",
+        type="dashboard",
+        business_domain="Executive Reporting",
+        owner="Analyst",
+        department="Executive",
+        certified=True,
+        usage_level="high",
+        business_criticality="critical",
+        dataset_ids=["ds_missing_from_inventory"],
+        audience="Executive Leadership",
+    )
+    linted = replace(inventory, dashboards=[broken_dashboard])
+
+    findings = lint_inventory(linted)
+
+    assert any("Dashboard references missing datasets: ds_missing_from_inventory" in finding.message for finding in findings)
