@@ -136,3 +136,31 @@ def test_lint_inventory_reports_dashboard_missing_dataset_reference():
     findings = lint_inventory(linted)
 
     assert any("Dashboard references missing datasets: ds_missing_from_inventory" in finding.message for finding in findings)
+
+
+def test_structural_parser_allows_dashboard_missing_dataset_reference_for_linting():
+    payload = {
+        "platform": "test",
+        "generated_at": "2026-06-14",
+        "datasets": [],
+        "dashboards": [
+            {
+                "id": "dash_missing_upstream",
+                "title": "Missing Upstream",
+                "type": "dashboard",
+                "business_domain": "Executive Reporting",
+                "owner": "Owner",
+                "department": "Executive",
+                "certified": True,
+                "usage_level": "high",
+                "business_criticality": "critical",
+                "dataset_ids": ["ds_not_loaded"],
+                "audience": "Executive Leadership",
+            }
+        ],
+    }
+
+    inventory = validate_inventory_payload(payload)
+
+    assert inventory.dashboards[0].dataset_ids == ["ds_not_loaded"]
+    assert any("Dashboard references missing datasets: ds_not_loaded" in finding.message for finding in lint_inventory(inventory))
