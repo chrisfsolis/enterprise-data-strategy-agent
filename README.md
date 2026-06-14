@@ -35,6 +35,23 @@ pip install -e .
 pip install -r requirements.txt
 ```
 
+
+### Optional web UI
+
+The project also includes a lightweight Streamlit app for users who prefer an upload-and-download workflow. Install the optional UI dependencies after activating your virtual environment:
+
+```bash
+pip install -e ".[ui]"
+```
+
+Run the app from the repository root:
+
+```bash
+streamlit run src/enterprise_data_strategy_agent/ui.py
+```
+
+In the browser, upload an inventory JSON file such as `data/sample_domo_inventory.json`. The UI validates the payload, runs the analyzer, displays health scores, top risks, quick wins, risky dashboards, stale datasets, trusted data product opportunities, and provides a markdown report preview with a download button.
+
 ## Run
 
 ```bash
