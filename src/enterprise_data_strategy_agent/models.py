@@ -29,7 +29,7 @@ class Dataset:
     refresh_cadence: str
     last_refreshed: date
     certified: bool
-    row_count: int
+    row_count: int | None
     sensitivity_level: str
     usage_level: str
     business_criticality: str
@@ -95,7 +95,7 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
                 refresh_cadence=raw["refresh_cadence"].lower(),
                 last_refreshed=_parse_date(raw["last_refreshed"]),  # type: ignore[arg-type]
                 certified=bool(raw["certified"]),
-                row_count=int(raw["row_count"]),
+                row_count=int(raw["row_count"]) if raw.get("row_count") is not None else None,
                 sensitivity_level=raw["sensitivity_level"].lower(),
                 usage_level=raw["usage_level"].lower(),
                 business_criticality=raw["business_criticality"].lower(),

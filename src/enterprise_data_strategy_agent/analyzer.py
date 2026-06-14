@@ -8,6 +8,7 @@ from itertools import combinations
 from enterprise_data_strategy_agent.config import CRITICALITY_LEVELS, HIGH_SENSITIVITY
 from enterprise_data_strategy_agent.models import Inventory
 from enterprise_data_strategy_agent.scoring import HealthScores, ScoreExplanation, calculate_scores, explain_scores, is_stale
+from enterprise_data_strategy_agent.validation import LintFinding, lint_inventory
 
 
 @dataclass(frozen=True)
@@ -25,6 +26,7 @@ class AnalysisResult:
     risky_dashboards: list[str] = field(default_factory=list)
     stale_datasets: list[str] = field(default_factory=list)
     duplicate_metrics: list[str] = field(default_factory=list)
+    lint_findings: list[LintFinding] = field(default_factory=list)
 
 
 def analyze_inventory(inventory: Inventory) -> AnalysisResult:
@@ -37,6 +39,7 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
     missing_owner_assets = [asset.name if hasattr(asset, "name") else asset.title for asset in [*inventory.datasets, *inventory.dashboards] if not asset.owner]
     sensitive_gaps = [dataset.name for dataset in inventory.datasets if dataset.sensitivity_level in HIGH_SENSITIVITY and not dataset.steward]
     duplicate_metrics = _find_duplicate_metrics(inventory)
+    lint_findings = lint_inventory(inventory)
 
     risky_dashboards = []
     for dashboard in inventory.dashboards:
@@ -110,7 +113,7 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
         "Meet security and governance owners to clarify stewardship for sensitive data.",
     ]
 
-    return AnalysisResult(scores, score_explanations, top_risks, quick_wins, actions, products, improvements, conversations, risky_dashboards, stale_datasets, duplicate_metrics)
+    return AnalysisResult(scores, score_explanations, top_risks, quick_wins, actions, products, improvements, conversations, risky_dashboards, stale_datasets, duplicate_metrics, lint_findings)
 
 
 def _find_duplicate_metrics(inventory: Inventory) -> list[str]:
