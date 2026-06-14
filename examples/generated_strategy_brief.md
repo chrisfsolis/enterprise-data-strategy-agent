@@ -84,6 +84,12 @@ Strategic trust findings below are generated separately from the metadata-qualit
   - **CRITICAL LINT005** dataset `ds_exec_kpi`: Sensitive dataset lacks stewardship. Recommendation: Assign both an owner and a steward before broadening access or certification.
   - **CRITICAL LINT005** dataset `ds_hr_headcount`: Sensitive dataset lacks stewardship. Recommendation: Assign both an owner and a steward before broadening access or certification.
 
+## Remediation Planning Snapshot
+- P0/P1 remediation items: **19**
+- Most urgent remediation theme: Executive reporting trust
+- Recommended first action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
+- Generate the full executable backlog with `enterprise-data-strategy-agent plan --input data/sample_domo_inventory.json --output examples/generated_remediation_plan.md`.
+
 ## Metadata Quality Lint Findings
 - **CRITICAL LINT004** dashboard `card_board_pack`: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot. Recommended action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
 - **CRITICAL LINT004** dashboard `card_exec_scorecard`: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot, Sales Bookings Pipeline. Recommended action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.

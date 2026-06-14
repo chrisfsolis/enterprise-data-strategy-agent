@@ -14,6 +14,7 @@ from enterprise_data_strategy_agent.connectors.domo_mock import DomoMockConnecto
 from enterprise_data_strategy_agent.linting import generate_markdown_lint_report, lint_inventory
 from enterprise_data_strategy_agent.models import Inventory
 from enterprise_data_strategy_agent.policy import StrategyPolicy, load_policy
+from enterprise_data_strategy_agent.planning import generate_json_backlog, generate_markdown_remediation_plan
 from enterprise_data_strategy_agent.report import generate_markdown_report
 
 DEFAULT_INPUT_PATH = Path("data/sample_domo_inventory.json")
@@ -41,6 +42,12 @@ def build_parser() -> argparse.ArgumentParser:
     lint.add_argument("--input", default=str(DEFAULT_INPUT_PATH), help=f"Path to synthetic inventory JSON (default: {DEFAULT_INPUT_PATH})")
     lint.add_argument("--output", help="Optional path to write a markdown lint report")
     lint.add_argument("--config", help="Optional strategy policy YAML file")
+
+    plan = subparsers.add_parser("plan", help="Generate an actionable enterprise data remediation plan")
+    plan.add_argument("--input", default=str(DEFAULT_INPUT_PATH), help=f"Path to synthetic inventory JSON (default: {DEFAULT_INPUT_PATH})")
+    plan.add_argument("--output", required=True, help="Path to write the markdown remediation plan")
+    plan.add_argument("--json-output", help="Optional path to write a machine-readable JSON remediation backlog")
+    plan.add_argument("--config", help="Optional strategy policy YAML file")
     return parser
 
 
@@ -86,6 +93,27 @@ def main(argv: list[str] | None = None) -> int:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(generate_markdown_lint_report(inventory, findings, policy), encoding="utf-8")
             print(f"Metadata lint report generated: {output_path}")
+        return 0
+
+    if args.command == "plan":
+        inventory = _load_inventory(Path(args.input))
+        if inventory is None:
+            return 2
+
+        policy = _load_policy(args.config)
+        if policy is None:
+            return 2
+
+        analysis = analyze_inventory(inventory, policy)
+        output_path = Path(args.output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(generate_markdown_remediation_plan(inventory, analysis, policy), encoding="utf-8")
+        print(f"Enterprise data remediation plan generated: {output_path}")
+        if args.json_output:
+            json_path = Path(args.json_output)
+            json_path.parent.mkdir(parents=True, exist_ok=True)
+            json_path.write_text(generate_json_backlog(inventory, analysis, policy), encoding="utf-8")
+            print(f"Enterprise data remediation backlog JSON generated: {json_path}")
         return 0
 
     if args.command == "validate":
