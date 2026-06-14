@@ -90,3 +90,17 @@ def test_validation_failure_returns_error(tmp_path, capsys):
 def test_invalid_format_rejected_by_parser():
     with pytest.raises(SystemExit):
         build_parser().parse_args(["analyze", "--format", "xml"])
+
+def test_lint_command_succeeds_with_findings_and_writes_report(tmp_path, capsys):
+    output_path = tmp_path / "lint.md"
+
+    result = main(["lint", "--input", str(DEFAULT_INPUT_PATH), "--output", str(output_path)])
+
+    assert result == 0
+    captured = capsys.readouterr()
+    assert "Inventory structural validation passed" in captured.out
+    assert "Metadata lint summary:" in captured.out
+    assert "Total findings" in captured.out
+    report = output_path.read_text(encoding="utf-8")
+    assert "# Enterprise Data Metadata Lint Report" in report
+    assert "## Recommended Fix Order" in report

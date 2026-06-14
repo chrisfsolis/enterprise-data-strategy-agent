@@ -34,8 +34,11 @@ def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult) -> 
         "Strategic trust findings below are generated separately from the metadata-quality lint results that follow.",
         *_bullets([*(f"Stale dataset: {name}" for name in analysis.stale_datasets), *(f"Duplicate metric candidate: {name}" for name in analysis.duplicate_metrics), "Manual refreshes and inconsistent calculation names should be treated as trust risks, not only operational cleanup."]),
         "",
+        "## Metadata Lint Summary",
+        *_lint_summary_lines(analysis),
+        "",
         "## Metadata Quality Lint Findings",
-        *_lint_lines(analysis),
+        *_lint_detail_lines(analysis),
         "",
         "## Dashboard and Reporting Risk",
         *_bullets(analysis.risky_dashboards or ["No critical dashboard risks were detected in the sample inventory."]),
@@ -97,10 +100,25 @@ def _score_lines(analysis: AnalysisResult) -> list[str]:
     return lines
 
 
-def _lint_lines(analysis: AnalysisResult) -> list[str]:
+def _lint_summary_lines(analysis: AnalysisResult) -> list[str]:
+    if not analysis.lint_findings:
+        return ["- No metadata lint findings were detected."]
+    severities = ("critical", "high", "medium", "low")
+    counts = {severity: sum(1 for finding in analysis.lint_findings if finding.severity == severity) for severity in severities}
+    lines = [
+        f"- Total lint findings: **{len(analysis.lint_findings)}**",
+        *(f"- {severity.title()}: **{counts[severity]}**" for severity in severities),
+    ]
+    lines.append("- Highest-priority examples:")
+    for finding in analysis.lint_findings[:5]:
+        lines.append(f"  - **{finding.severity.upper()} {finding.rule_id}** {finding.affected_object_type} `{finding.affected_object_id}`: {finding.title}. Recommendation: {finding.recommendation}")
+    return lines
+
+
+def _lint_detail_lines(analysis: AnalysisResult) -> list[str]:
     if not analysis.lint_findings:
         return ["- No metadata-quality lint findings were detected."]
     return [
-        f"- **{finding.severity.upper()}** {finding.asset_type} `{finding.asset_id}`: {finding.message} Recommended action: {finding.recommended_action}"
+        f"- **{finding.severity.upper()} {finding.rule_id}** {finding.affected_object_type} `{finding.affected_object_id}`: {finding.description} Recommended action: {finding.recommendation}"
         for finding in analysis.lint_findings
     ]

@@ -11,6 +11,7 @@ from pathlib import Path
 
 from enterprise_data_strategy_agent.analyzer import AnalysisResult, analyze_inventory
 from enterprise_data_strategy_agent.connectors.domo_mock import DomoMockConnector
+from enterprise_data_strategy_agent.linting import generate_markdown_lint_report, lint_inventory
 from enterprise_data_strategy_agent.models import Inventory
 from enterprise_data_strategy_agent.report import generate_markdown_report
 
@@ -33,6 +34,10 @@ def build_parser() -> argparse.ArgumentParser:
     validate = subparsers.add_parser("validate", help="Validate and lint an inventory without generating a strategy brief")
     validate.add_argument("--input", default=str(DEFAULT_INPUT_PATH), help=f"Path to synthetic inventory JSON (default: {DEFAULT_INPUT_PATH})")
     validate.add_argument("--print-summary", action="store_true", help="Print top risks and health scores to stdout")
+
+    lint = subparsers.add_parser("lint", help="Run advisory metadata quality and governance lint checks")
+    lint.add_argument("--input", default=str(DEFAULT_INPUT_PATH), help=f"Path to synthetic inventory JSON (default: {DEFAULT_INPUT_PATH})")
+    lint.add_argument("--output", help="Optional path to write a markdown lint report")
     return parser
 
 
@@ -53,6 +58,23 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Enterprise data strategy {args.format} output generated: {output_path}")
         if args.print_summary:
             _print_summary(analysis)
+        return 0
+
+    if args.command == "lint":
+        inventory = _load_inventory(Path(args.input))
+        if inventory is None:
+            return 2
+
+        findings = lint_inventory(inventory)
+        print(f"Inventory structural validation passed: {args.input}")
+        print(f"Datasets: {len(inventory.datasets)}")
+        print(f"Dashboards/cards: {len(inventory.dashboards)}")
+        _print_lint_summary(findings)
+        if args.output:
+            output_path = Path(args.output)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            output_path.write_text(generate_markdown_lint_report(inventory, findings), encoding="utf-8")
+            print(f"Metadata lint report generated: {output_path}")
         return 0
 
     if args.command == "validate":
@@ -130,6 +152,16 @@ def _print_lint_results(analysis: AnalysisResult) -> int:
     for finding in findings:
         print(f"- {finding}")
     return len(findings)
+
+
+def _print_lint_summary(findings):
+    severities = ("critical", "high", "medium", "low")
+    print("Metadata lint summary:")
+    print(f"- Total findings: {len(findings)}")
+    for severity in severities:
+        print(f"- {severity.title()}: {sum(1 for finding in findings if finding.severity == severity)}")
+    for finding in findings[:5]:
+        print(f"- {finding.severity.upper()} {finding.rule_id}: {finding.title} ({finding.affected_object_type} {finding.affected_object_id})")
 
 
 if __name__ == "__main__":

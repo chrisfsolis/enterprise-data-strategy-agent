@@ -28,3 +28,31 @@ def test_report_contains_expected_sections_and_disclaimer():
     assert "penalty" in report or "bonus" in report
     assert "Strategic trust findings below are generated separately" in report
     assert "Recommended action:" in report
+
+from enterprise_data_strategy_agent.linting import generate_markdown_lint_report, lint_inventory
+
+
+def test_markdown_lint_report_contains_expected_sections():
+    inventory = load_sample_inventory("data/sample_domo_inventory.json")
+    report = generate_markdown_lint_report(inventory, lint_inventory(inventory))
+
+    for section in [
+        "# Enterprise Data Metadata Lint Report",
+        "## Summary",
+        "## Critical Findings",
+        "## High Findings",
+        "## Medium Findings",
+        "## Low Findings",
+        "## Recommended Fix Order",
+        "## Notes",
+    ]:
+        assert section in report
+    assert "Linting is advisory" in report
+
+
+def test_analyze_report_includes_metadata_lint_summary():
+    inventory = load_sample_inventory("data/sample_domo_inventory.json")
+    report = generate_markdown_report(inventory, analyze_inventory(inventory))
+
+    assert "## Metadata Lint Summary" in report
+    assert "Total lint findings" in report
