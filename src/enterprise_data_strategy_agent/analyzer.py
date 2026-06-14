@@ -7,6 +7,7 @@ from itertools import combinations
 
 from enterprise_data_strategy_agent.config import CRITICALITY_LEVELS, HIGH_SENSITIVITY
 from enterprise_data_strategy_agent.models import Inventory
+from enterprise_data_strategy_agent.policy import DEFAULT_POLICY, StrategyPolicy
 from enterprise_data_strategy_agent.scoring import HealthScores, ScoreExplanation, calculate_scores, explain_scores, is_stale
 from enterprise_data_strategy_agent.linting import LintFinding, lint_inventory
 
@@ -29,17 +30,18 @@ class AnalysisResult:
     lint_findings: list[LintFinding] = field(default_factory=list)
 
 
-def analyze_inventory(inventory: Inventory) -> AnalysisResult:
+def analyze_inventory(inventory: Inventory, policy: StrategyPolicy | None = None) -> AnalysisResult:
     """Analyze metadata and return practical strategy recommendations."""
 
-    scores = calculate_scores(inventory)
-    score_explanations = explain_scores(inventory)
+    active_policy = policy or DEFAULT_POLICY
+    scores = calculate_scores(inventory, active_policy)
+    score_explanations = explain_scores(inventory, active_policy)
     dataset_by_id = {dataset.id: dataset for dataset in inventory.datasets}
-    stale_datasets = [dataset.name for dataset in inventory.datasets if is_stale(dataset, inventory.generated_at)]
+    stale_datasets = [dataset.name for dataset in inventory.datasets if is_stale(dataset, inventory.generated_at, active_policy)]
     missing_owner_assets = [asset.name if hasattr(asset, "name") else asset.title for asset in [*inventory.datasets, *inventory.dashboards] if not asset.owner]
     sensitive_gaps = [dataset.name for dataset in inventory.datasets if dataset.sensitivity_level in HIGH_SENSITIVITY and not dataset.steward]
     duplicate_metrics = _find_duplicate_metrics(inventory)
-    lint_findings = lint_inventory(inventory)
+    lint_findings = lint_inventory(inventory, active_policy)
 
     risky_dashboards = []
     for dashboard in inventory.dashboards:
@@ -52,7 +54,7 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
             reasons.append("missing owner")
         if any(not dataset.certified for dataset in related):
             reasons.append("uses uncertified datasets")
-        if any(is_stale(dataset, inventory.generated_at) for dataset in related):
+        if any(is_stale(dataset, inventory.generated_at, active_policy) for dataset in related):
             reasons.append("powered by stale data")
         if missing_dataset_ids:
             reasons.append(f"references missing datasets: {', '.join(missing_dataset_ids)}")
@@ -96,25 +98,14 @@ def analyze_inventory(inventory: Inventory) -> AnalysisResult:
         ],
     }
 
-    products = [
-        "Executive KPI Certified Data Product",
-        "Finance Revenue and Bookings Data Product",
-        "Sales Pipeline and Forecast Data Product",
-        "Customer Health and Renewal Data Product",
-        "Operations Fulfillment and SLA Data Product",
-    ]
+    products = [f"{domain} Trusted Data Product" for domain in active_policy.trusted_data_product_domains]
     improvements = [
         "Require owners and stewards for certified and sensitive datasets.",
         "Separate experimental dashboards from certified executive reporting surfaces.",
         "Standardize calculated metric naming, definitions, and approval workflow.",
         "Review high-row-count, low-usage datasets for archiving or data product redesign.",
     ]
-    conversations = [
-        "Meet Finance and Sales leaders to align on revenue metric definitions.",
-        "Meet executive reporting owners to agree on certification standards and escalation paths.",
-        "Meet BI administrators to design recurring metadata quality reviews.",
-        "Meet security and governance owners to clarify stewardship for sensitive data.",
-    ]
+    conversations = [f"Meet with {role} to align policy thresholds, ownership, certification, and escalation expectations." for role in active_policy.stakeholder_roles]
 
     return AnalysisResult(scores, score_explanations, top_risks, quick_wins, actions, products, improvements, conversations, risky_dashboards, stale_datasets, duplicate_metrics, lint_findings)
 

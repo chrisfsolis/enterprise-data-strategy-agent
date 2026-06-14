@@ -1,19 +1,28 @@
 # Enterprise Data Strategy Brief
 
 ## Executive Summary
-The analytics environment shows an overall health score of 48/100. The strongest immediate opportunities are to improve ownership, certify executive reporting paths, remediate stale datasets, and standardize duplicate metric logic before it reaches business-critical dashboards.
+The analytics environment shows an overall health score of 49/100. The strongest immediate opportunities are to improve ownership, certify executive reporting paths, remediate stale datasets, and standardize duplicate metric logic before it reaches business-critical dashboards.
 
 ## Platform Context
 This version analyzes synthetic metadata from the Domo-style reference metadata for datasets, cards, dashboards, owners, certification, calculated metrics, sensitivity, usage, and refresh patterns. This project is independent and is not affiliated with, endorsed by, or sponsored by Domo. Domo-style metadata is used only as the first reference implementation.
 
+## Strategy Policy Context
+- Organization name: Acme Enterprise
+- Industry: SaaS and Digital Operations
+- Data maturity stage: Governed self-service analytics
+- Primary platform: Domo
+- Strategy owner role: Enterprise Data Manager
+- Policy source: config/sample_strategy_policy.yml
+- Major assumptions: daily datasets stale after 2 days; weekly after 10 days; monthly after 35 days; manual datasets reviewed after 14 days; high-row-count datasets start at 750,000 rows; executive certification required is True.
+
 ## Health Scores
-- Overall enterprise data strategy health: **48/100**
-  - Why: Governance controls certification and stewardship risk. Trust combines governance, freshness, and ownership health. Freshness reflects stale-data exposure. Ownership reflects accountability coverage. Executive reporting risk captures high-visibility dashboard exposure.
-  - Governance: bonus +12.8 points — Governance controls certification and stewardship risk.
-  - Trust: bonus +13.0 points — Trust combines governance, freshness, and ownership health.
-  - Freshness: bonus +9.8 points — Freshness reflects stale-data exposure.
-  - Ownership: bonus +9.3 points — Ownership reflects accountability coverage.
-  - Executive reporting risk: bonus +3.0 points — Executive reporting risk captures high-visibility dashboard exposure.
+- Overall enterprise data strategy health: **49/100**
+  - Why: Governance contributes 30% of the overall score. Trust contributes 25% of the overall score. Freshness contributes 20% of the overall score. Ownership contributes 15% of the overall score. Executive reporting risk contributes 10% of the overall score.
+  - Governance: bonus +15.3 points — Governance contributes 30% of the overall score.
+  - Trust: bonus +13.0 points — Trust contributes 25% of the overall score.
+  - Freshness: bonus +9.8 points — Freshness contributes 20% of the overall score.
+  - Ownership: bonus +9.3 points — Ownership contributes 15% of the overall score.
+  - Executive reporting risk: bonus +2.0 points — Executive reporting risk contributes 10% of the overall score.
 - Governance score: **51/100**
   - Why: 5 assets that require certification are not certified. 4 high-sensitivity datasets lack a named steward. 2 datasets use manual refreshes, which weakens repeatable governance.
   - Uncertified expected assets: penalty -8.8 points — 5 assets that require certification are not certified.
@@ -64,38 +73,38 @@ Strategic trust findings below are generated separately from the metadata-qualit
 
 ## Metadata Lint Summary
 - Total lint findings: **22**
-- Critical: **2**
+- Critical: **6**
 - High: **12**
-- Medium: **6**
+- Medium: **2**
 - Low: **2**
 - Highest-priority examples:
+  - **CRITICAL LINT004** dashboard `card_board_pack`: Executive dashboard uses uncertified datasets. Recommendation: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
+  - **CRITICAL LINT004** dashboard `card_exec_scorecard`: Executive dashboard uses uncertified datasets. Recommendation: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
+  - **CRITICAL LINT005** dataset `ds_cs_health`: Sensitive dataset lacks stewardship. Recommendation: Assign a data steward responsible for access, definitions, and quality expectations.
   - **CRITICAL LINT005** dataset `ds_exec_kpi`: Sensitive dataset lacks stewardship. Recommendation: Assign both an owner and a steward before broadening access or certification.
   - **CRITICAL LINT005** dataset `ds_hr_headcount`: Sensitive dataset lacks stewardship. Recommendation: Assign both an owner and a steward before broadening access or certification.
-  - **HIGH LINT002** dataset `ds_exec_kpi`: Dataset owner is missing. Recommendation: Assign a business owner responsible for definitions, quality expectations, and escalation.
-  - **HIGH LINT003** dashboard `card_exec_scorecard`: Dashboard or card owner is missing. Recommendation: Assign a business owner who can approve definitions, certification, and remediation decisions.
-  - **HIGH LINT004** dashboard `card_board_pack`: Executive dashboard uses uncertified datasets. Recommendation: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
 
 ## Metadata Quality Lint Findings
+- **CRITICAL LINT004** dashboard `card_board_pack`: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot. Recommended action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
+- **CRITICAL LINT004** dashboard `card_exec_scorecard`: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot, Sales Bookings Pipeline. Recommended action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
+- **CRITICAL LINT005** dataset `ds_cs_health`: Sensitive dataset has no named steward. Recommended action: Assign a data steward responsible for access, definitions, and quality expectations.
 - **CRITICAL LINT005** dataset `ds_exec_kpi`: Sensitive dataset has no steward or owner. Recommended action: Assign both an owner and a steward before broadening access or certification.
 - **CRITICAL LINT005** dataset `ds_hr_headcount`: Sensitive dataset has no steward or owner. Recommended action: Assign both an owner and a steward before broadening access or certification.
+- **CRITICAL LINT005** dataset `ds_product_usage`: Sensitive dataset has no named steward. Recommended action: Assign a data steward responsible for access, definitions, and quality expectations.
 - **HIGH LINT002** dataset `ds_exec_kpi`: Dataset has no accountable business owner. Recommended action: Assign a business owner responsible for definitions, quality expectations, and escalation.
-- **HIGH LINT003** dashboard `card_exec_scorecard`: Dashboard/card has no accountable business owner. Recommended action: Assign a business owner who can approve definitions, certification, and remediation decisions.
-- **HIGH LINT004** dashboard `card_board_pack`: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot. Recommended action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
-- **HIGH LINT004** dashboard `card_exec_scorecard`: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot, Sales Bookings Pipeline. Recommended action: Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making.
-- **HIGH LINT005** dataset `ds_cs_health`: Sensitive dataset has no named steward. Recommended action: Assign a data steward responsible for access, definitions, and quality expectations.
-- **HIGH LINT005** dataset `ds_product_usage`: Sensitive dataset has no named steward. Recommended action: Assign a data steward responsible for access, definitions, and quality expectations.
+- **HIGH LINT002** dataset `ds_hr_headcount`: Dataset has no accountable business owner. Recommended action: Assign a business owner responsible for definitions, quality expectations, and escalation.
+- **HIGH LINT006** dataset `ds_budget_plan`: Dataset last refreshed on 2026-01-31 is stale for its manual cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
+- **HIGH LINT006** dataset `ds_cs_health`: Dataset last refreshed on 2026-05-20 is stale for its weekly cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 - **HIGH LINT006** dataset `ds_exec_kpi`: Dataset last refreshed on 2026-04-15 is stale for its manual cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
+- **HIGH LINT006** dataset `ds_hr_headcount`: Dataset last refreshed on 2026-03-31 is stale for its monthly cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
+- **HIGH LINT006** dataset `ds_product_usage`: Dataset last refreshed on 2026-05-01 is stale for its daily cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 - **HIGH LINT006** dataset `ds_sales_bookings`: Dataset last refreshed on 2026-06-10 is stale for its daily cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 - **HIGH LINT007** dashboard `card_board_pack`: High-criticality dashboard uses manually refreshed datasets: Executive KPI Snapshot, Annual Budget Plan. Recommended action: Move these datasets to scheduled refreshes with freshness alerts and documented SLAs.
 - **HIGH LINT007** dashboard `card_exec_scorecard`: High-criticality dashboard uses manually refreshed datasets: Executive KPI Snapshot. Recommended action: Move these datasets to scheduled refreshes with freshness alerts and documented SLAs.
 - **HIGH LINT007** dashboard `dash_fin_close`: High-criticality dashboard uses manually refreshed datasets: Annual Budget Plan. Recommended action: Move these datasets to scheduled refreshes with freshness alerts and documented SLAs.
 - **HIGH LINT010** dashboard `card_marketing_roi`: Certified dashboard is backed by uncertified datasets: Sales Bookings Pipeline. Recommended action: Certify upstream datasets or remove dashboard certification until dependencies are trusted.
-- **MEDIUM LINT002** dataset `ds_hr_headcount`: Dataset has no accountable business owner. Recommended action: Assign a business owner responsible for definitions, quality expectations, and escalation.
+- **MEDIUM LINT003** dashboard `card_exec_scorecard`: Dashboard/card has no accountable business owner. Recommended action: Assign a business owner who can approve definitions, certification, and remediation decisions.
 - **MEDIUM LINT003** dashboard `dash_people_plan`: Dashboard/card has no accountable business owner. Recommended action: Assign a business owner who can approve definitions, certification, and remediation decisions.
-- **MEDIUM LINT006** dataset `ds_budget_plan`: Dataset last refreshed on 2026-01-31 is stale for its manual cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
-- **MEDIUM LINT006** dataset `ds_cs_health`: Dataset last refreshed on 2026-05-20 is stale for its weekly cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
-- **MEDIUM LINT006** dataset `ds_hr_headcount`: Dataset last refreshed on 2026-03-31 is stale for its monthly cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
-- **MEDIUM LINT006** dataset `ds_product_usage`: Dataset last refreshed on 2026-05-01 is stale for its daily cadence. Recommended action: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 - **LOW LINT009** dataset `ds_ops_fulfillment`: Dataset has 9,400,000 rows but low usage. Recommended action: Review whether this dataset should be archived, summarized, promoted, or redesigned as a governed data product.
 - **LOW LINT009** dataset `ds_product_usage`: Dataset has 18,800,000 rows but low usage. Recommended action: Review whether this dataset should be archived, summarized, promoted, or redesigned as a governed data product.
 
@@ -106,11 +115,11 @@ Strategic trust findings below are generated separately from the metadata-qualit
 - Sales Forecast Command Center: uncertified, uses uncertified datasets, powered by stale data
 
 ## Trusted Data Product Opportunities
-- Executive KPI Certified Data Product
-- Finance Revenue and Bookings Data Product
-- Sales Pipeline and Forecast Data Product
-- Customer Health and Renewal Data Product
-- Operations Fulfillment and SLA Data Product
+- Executive Reporting Trusted Data Product
+- Finance Trusted Data Product
+- Sales Trusted Data Product
+- Customer Success Trusted Data Product
+- Operations Trusted Data Product
 
 ## Recommended 30/60/90 Day Plan
 ### 30 days
@@ -139,7 +148,10 @@ The same pattern can expand to Snowflake, Tableau, Power BI, Looker, dbt, Collib
 - Move manually refreshed critical datasets onto documented schedules or alerts.
 
 ## Suggested Stakeholder Conversations
-- Meet Finance and Sales leaders to align on revenue metric definitions.
-- Meet executive reporting owners to agree on certification standards and escalation paths.
-- Meet BI administrators to design recurring metadata quality reviews.
-- Meet security and governance owners to clarify stewardship for sensitive data.
+- Meet with Enterprise Data Manager to align policy thresholds, ownership, certification, and escalation expectations.
+- Meet with Domo Admin to align policy thresholds, ownership, certification, and escalation expectations.
+- Meet with Finance Leader to align policy thresholds, ownership, certification, and escalation expectations.
+- Meet with Sales Operations Leader to align policy thresholds, ownership, certification, and escalation expectations.
+- Meet with Customer Success Operations Leader to align policy thresholds, ownership, certification, and escalation expectations.
+- Meet with Data Governance Owner to align policy thresholds, ownership, certification, and escalation expectations.
+- Meet with Security or Compliance Partner to align policy thresholds, ownership, certification, and escalation expectations.

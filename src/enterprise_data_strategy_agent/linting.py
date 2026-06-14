@@ -6,7 +6,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from typing import Literal
 
-from enterprise_data_strategy_agent.config import HIGH_SENSITIVITY, STALE_DAYS_BY_CADENCE
+from enterprise_data_strategy_agent.config import HIGH_SENSITIVITY
+from enterprise_data_strategy_agent.policy import DEFAULT_POLICY, StrategyPolicy
 from enterprise_data_strategy_agent.models import Inventory
 from enterprise_data_strategy_agent.scoring import is_stale
 
@@ -47,9 +48,10 @@ class LintFinding:
         return self.recommendation
 
 
-def lint_inventory(inventory: Inventory) -> list[LintFinding]:
+def lint_inventory(inventory: Inventory, policy: StrategyPolicy | None = None) -> list[LintFinding]:
     """Return advisory business metadata lint findings for a parsed inventory."""
 
+    active_policy = policy or DEFAULT_POLICY
     findings: list[LintFinding] = []
     for dataset_id, count in Counter(dataset.id for dataset in inventory.datasets).items():
         if count > 1:
@@ -69,28 +71,28 @@ def lint_inventory(inventory: Inventory) -> list[LintFinding]:
         missing_ids = [dataset_id for dataset_id in dashboard.dataset_ids if dataset_id not in dataset_by_id]
 
         if missing_ids:
-            findings.append(_finding("LINT001", "critical", "Dashboard or card references missing datasets", f"Dashboard references missing datasets: {', '.join(missing_ids)}.", "dashboard", dashboard.id, dashboard.title, "Add the referenced datasets to inventory.datasets or remove stale dashboard/card dataset_ids."))
+            findings.append(_finding("LINT001", active_policy.severity("missing_dataset_reference", "critical"), "Dashboard or card references missing datasets", f"Dashboard references missing datasets: {', '.join(missing_ids)}.", "dashboard", dashboard.id, dashboard.title, "Add the referenced datasets to inventory.datasets or remove stale dashboard/card dataset_ids."))
         if not dashboard.owner:
-            findings.append(_finding("LINT003", "high" if dashboard.business_criticality == "critical" else "medium", "Dashboard or card owner is missing", "Dashboard/card has no accountable business owner.", "dashboard", dashboard.id, dashboard.title, "Assign a business owner who can approve definitions, certification, and remediation decisions."))
+            findings.append(_finding("LINT003", active_policy.severity("missing_dashboard_owner", "high" if dashboard.business_criticality == "critical" else "medium"), "Dashboard or card owner is missing", "Dashboard/card has no accountable business owner.", "dashboard", dashboard.id, dashboard.title, "Assign a business owner who can approve definitions, certification, and remediation decisions."))
         if not dashboard.dataset_ids:
-            findings.append(_finding("LINT011", "medium", "Dashboard has no linked datasets", "Dashboard has no dataset_ids / no linked datasets.", "dashboard", dashboard.id, dashboard.title, "Attach upstream datasets or archive/remove the orphaned dashboard metadata."))
+            findings.append(_finding("LINT011", active_policy.severity("dashboard_without_datasets", "medium"), "Dashboard has no linked datasets", "Dashboard has no dataset_ids / no linked datasets.", "dashboard", dashboard.id, dashboard.title, "Attach upstream datasets or archive/remove the orphaned dashboard metadata."))
 
         uncertified = [dataset.name for dataset in linked if not dataset.certified]
         executive = "executive" in dashboard.audience.lower() or "executive" in dashboard.business_domain.lower()
         if executive and uncertified:
-            findings.append(_finding("LINT004", "high", "Executive dashboard uses uncertified datasets", f"Executive dashboard is powered by uncertified datasets: {', '.join(uncertified)}.", "dashboard", dashboard.id, dashboard.title, "Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making."))
+            findings.append(_finding("LINT004", active_policy.severity("executive_dashboard_uncertified_source", "high"), "Executive dashboard uses uncertified datasets", f"Executive dashboard is powered by uncertified datasets: {', '.join(uncertified)}.", "dashboard", dashboard.id, dashboard.title, "Certify upstream datasets or clearly label the dashboard as not certified for executive decision-making."))
         if dashboard.certified and uncertified:
             findings.append(_finding("LINT010", "high", "Certified dashboard uses uncertified datasets", f"Certified dashboard is backed by uncertified datasets: {', '.join(uncertified)}.", "dashboard", dashboard.id, dashboard.title, "Certify upstream datasets or remove dashboard certification until dependencies are trusted."))
 
         manual = [dataset.name for dataset in linked if dataset.refresh_cadence == "manual"]
         if dashboard.business_criticality == "critical" and manual:
-            findings.append(_finding("LINT007", "high", "Critical dashboard depends on manually refreshed data", f"High-criticality dashboard uses manually refreshed datasets: {', '.join(manual)}.", "dashboard", dashboard.id, dashboard.title, "Move these datasets to scheduled refreshes with freshness alerts and documented SLAs."))
+            findings.append(_finding("LINT007", active_policy.severity("manual_refresh_high_criticality", "high"), "Critical dashboard depends on manually refreshed data", f"High-criticality dashboard uses manually refreshed datasets: {', '.join(manual)}.", "dashboard", dashboard.id, dashboard.title, "Move these datasets to scheduled refreshes with freshness alerts and documented SLAs."))
 
     for dataset in inventory.datasets:
         _check_allowed(findings, "dataset", dataset.id, dataset.name, "sensitivity", dataset.sensitivity_level, {"public", "internal", *HIGH_SENSITIVITY})
         _check_allowed(findings, "dataset", dataset.id, dataset.name, "usage", dataset.usage_level, {"low", "medium", "high"})
         _check_allowed(findings, "dataset", dataset.id, dataset.name, "criticality", dataset.business_criticality, {"low", "medium", "high", "critical"})
-        _check_allowed(findings, "dataset", dataset.id, dataset.name, "refresh cadence", dataset.refresh_cadence, set(STALE_DAYS_BY_CADENCE))
+        _check_allowed(findings, "dataset", dataset.id, dataset.name, "refresh cadence", dataset.refresh_cadence, active_policy.freshness_thresholds.cadences())
         if dataset.row_count is None:
             findings.append(_finding("LINT015", "low", "Dataset row count is missing", "Dataset row count is missing.", "dataset", dataset.id, dataset.name, "Populate row_count so sizing, usage, and archival decisions have context."))
         elif dataset.row_count < 0:
@@ -98,23 +100,23 @@ def lint_inventory(inventory: Inventory) -> list[LintFinding]:
         if dataset.last_refreshed > inventory.generated_at:
             findings.append(_finding("LINT017", "high", "Dataset refresh date is in the future", "Dataset last_refreshed is after the inventory generated_at date.", "dataset", dataset.id, dataset.name, "Correct the refresh timestamp or regenerate the inventory with a later generated_at date."))
         if not dataset.owner:
-            findings.append(_finding("LINT002", "high" if dataset.business_criticality == "critical" else "medium", "Dataset owner is missing", "Dataset has no accountable business owner.", "dataset", dataset.id, dataset.name, "Assign a business owner responsible for definitions, quality expectations, and escalation."))
+            findings.append(_finding("LINT002", active_policy.severity("missing_dataset_owner", "high" if dataset.business_criticality == "critical" else "medium"), "Dataset owner is missing", "Dataset has no accountable business owner.", "dataset", dataset.id, dataset.name, "Assign a business owner responsible for definitions, quality expectations, and escalation."))
         if dataset.sensitivity_level in HIGH_SENSITIVITY and not (dataset.owner or dataset.steward):
-            findings.append(_finding("LINT005", "critical", "Sensitive dataset lacks stewardship", "Sensitive dataset has no steward or owner.", "dataset", dataset.id, dataset.name, "Assign both an owner and a steward before broadening access or certification."))
+            findings.append(_finding("LINT005", active_policy.severity("sensitive_dataset_without_owner", "critical"), "Sensitive dataset lacks stewardship", "Sensitive dataset has no steward or owner.", "dataset", dataset.id, dataset.name, "Assign both an owner and a steward before broadening access or certification."))
         elif dataset.sensitivity_level in HIGH_SENSITIVITY and not dataset.steward:
-            findings.append(_finding("LINT005", "high", "Sensitive dataset lacks stewardship", "Sensitive dataset has no named steward.", "dataset", dataset.id, dataset.name, "Assign a data steward responsible for access, definitions, and quality expectations."))
-        if is_stale(dataset, inventory.generated_at):
-            findings.append(_finding("LINT006", "high" if dataset.business_criticality == "critical" else "medium", "Dataset is stale", f"Dataset last refreshed on {dataset.last_refreshed.isoformat()} is stale for its {dataset.refresh_cadence} cadence.", "dataset", dataset.id, dataset.name, "Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable."))
-        if dataset.row_count and dataset.row_count >= 1_000_000 and dataset.usage_level == "low":
+            findings.append(_finding("LINT005", active_policy.severity("sensitive_dataset_without_owner", "high"), "Sensitive dataset lacks stewardship", "Sensitive dataset has no named steward.", "dataset", dataset.id, dataset.name, "Assign a data steward responsible for access, definitions, and quality expectations."))
+        if is_stale(dataset, inventory.generated_at, active_policy):
+            findings.append(_finding("LINT006", active_policy.severity("stale_dataset", "high" if dataset.business_criticality == "critical" else "medium"), "Dataset is stale", f"Dataset last refreshed on {dataset.last_refreshed.isoformat()} is stale for its {dataset.refresh_cadence} cadence.", "dataset", dataset.id, dataset.name, "Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable."))
+        if dataset.row_count and dataset.row_count >= active_policy.usage_thresholds.high_row_count_threshold and dataset.usage_level == "low":
             findings.append(_finding("LINT009", "low", "High-row-count dataset has low usage", f"Dataset has {dataset.row_count:,} rows but low usage.", "dataset", dataset.id, dataset.name, "Review whether this dataset should be archived, summarized, promoted, or redesigned as a governed data product."))
         if dataset.id not in downstream_ids:
-            findings.append(_finding("LINT012", "low", "Dataset has no downstream dashboards or cards", "Dataset has no downstream dashboards/cards.", "dataset", dataset.id, dataset.name, "Confirm whether this dataset should be archived, promoted, or connected to reporting assets."))
+            findings.append(_finding("LINT012", active_policy.severity("orphan_dataset", "low"), "Dataset has no downstream dashboards or cards", "Dataset has no downstream dashboards/cards.", "dataset", dataset.id, dataset.name, "Confirm whether this dataset should be archived, promoted, or connected to reporting assets."))
 
-    _add_duplicate_metric_findings(inventory, findings)
+    _add_duplicate_metric_findings(inventory, findings, active_policy)
     return sorted(findings, key=lambda f: ({"critical": 0, "high": 1, "medium": 2, "low": 3}[f.severity], f.rule_id, f.affected_object_id))
 
 
-def _add_duplicate_metric_findings(inventory: Inventory, findings: list[LintFinding]) -> None:
+def _add_duplicate_metric_findings(inventory: Inventory, findings: list[LintFinding], policy: StrategyPolicy) -> None:
     by_normalized: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for dataset in inventory.datasets:
         for metric in dataset.calculated_metrics:
@@ -123,16 +125,17 @@ def _add_duplicate_metric_findings(inventory: Inventory, findings: list[LintFind
     for normalized, occurrences in by_normalized.items():
         display_names = sorted({name for _, name in occurrences})
         if len(occurrences) > 1 or len(display_names) > 1:
-            findings.append(_finding("LINT008", "medium", "Duplicate or inconsistent calculated metric names", f"Calculated metric name '{normalized}' appears multiple times or with inconsistent formatting: {', '.join(display_names)}.", "metric", normalized, normalized, "Standardize metric naming, definitions, owners, and approved calculation logic."))
+            findings.append(_finding("LINT008", policy.severity("duplicate_metric", "medium"), "Duplicate or inconsistent calculated metric names", f"Calculated metric name '{normalized}' appears multiple times or with inconsistent formatting: {', '.join(display_names)}.", "metric", normalized, normalized, "Standardize metric naming, definitions, owners, and approved calculation logic."))
 
 
 def _finding(rule_id: str, severity: Severity, title: str, description: str, object_type: str, object_id: str, object_name: str, recommendation: str) -> LintFinding:
     return LintFinding(rule_id, severity, title, description, object_type, object_id, object_name, recommendation)
 
 
-def generate_markdown_lint_report(inventory: Inventory, findings: list[LintFinding]) -> str:
+def generate_markdown_lint_report(inventory: Inventory, findings: list[LintFinding], policy: StrategyPolicy | None = None) -> str:
     """Generate a markdown metadata lint report."""
 
+    active_policy = policy or DEFAULT_POLICY
     counts = {severity: sum(1 for f in findings if f.severity == severity) for severity in ("critical", "high", "medium", "low")}
     lines = [
         "# Enterprise Data Metadata Lint Report",
@@ -143,6 +146,10 @@ def generate_markdown_lint_report(inventory: Inventory, findings: list[LintFindi
         f"Dashboards/cards: {len(inventory.dashboards)}",
         f"Total findings: {len(findings)}",
         *[f"- {severity.title()}: {counts[severity]}" for severity in ("critical", "high", "medium", "low")],
+        "",
+        "## Policy Context",
+        f"Policy settings: {active_policy.source_path if active_policy.source_path else 'Default policy settings'}",
+        f"Organization: {active_policy.organization.name}",
         "",
     ]
     for severity in ("critical", "high", "medium", "low"):
