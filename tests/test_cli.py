@@ -137,3 +137,64 @@ def test_plan_command_works_without_config(tmp_path):
 
     assert result == 0
     assert "Custom policy used: no" in markdown.read_text(encoding="utf-8")
+
+import os
+import subprocess
+import sys
+
+
+def _run_cli(args, tmp_path=None):
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path.cwd() / "src")
+    return subprocess.run(
+        [sys.executable, "-m", "enterprise_data_strategy_agent.cli", *args],
+        cwd=Path.cwd(),
+        env=env,
+        input=b"",
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=20,
+    )
+
+
+def test_module_help_exits_successfully_without_stdin(tmp_path):
+    result = _run_cli(["--help"], tmp_path)
+    assert result.returncode == 0
+    assert b"doctor" in result.stdout
+
+
+def test_doctor_command_exits_successfully_from_repo_root(tmp_path):
+    result = _run_cli(["doctor"], tmp_path)
+    assert result.returncode == 0, result.stderr.decode()
+    assert b"[OK] Found pyproject.toml" in result.stdout
+
+
+def test_lint_analyze_plan_subprocesses_generate_outputs_without_stdin(tmp_path):
+    lint_out = tmp_path / "lint.md"
+    brief_out = tmp_path / "brief.md"
+    plan_out = tmp_path / "plan.md"
+    backlog_out = tmp_path / "backlog.json"
+
+    commands = [
+        ["lint", "--input", "data/sample_domo_inventory.json", "--output", str(lint_out), "--config", "config/sample_strategy_policy.yml"],
+        ["analyze", "--input", "data/sample_domo_inventory.json", "--output", str(brief_out), "--config", "config/sample_strategy_policy.yml"],
+        ["plan", "--input", "data/sample_domo_inventory.json", "--output", str(plan_out), "--json-output", str(backlog_out), "--config", "config/sample_strategy_policy.yml"],
+    ]
+    for command in commands:
+        result = _run_cli(command, tmp_path)
+        assert result.returncode == 0, result.stderr.decode()
+        assert b"Done." in result.stdout
+
+    assert lint_out.exists()
+    assert brief_out.exists()
+    assert plan_out.exists()
+    assert backlog_out.exists()
+
+
+def test_cli_import_does_not_import_streamlit():
+    code = "import sys; import enterprise_data_strategy_agent.cli; print('streamlit' in sys.modules)"
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(Path.cwd() / "src")
+    result = subprocess.run([sys.executable, "-c", code], cwd=Path.cwd(), env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=20)
+    assert result.returncode == 0, result.stderr.decode()
+    assert result.stdout.strip() == b"False"
