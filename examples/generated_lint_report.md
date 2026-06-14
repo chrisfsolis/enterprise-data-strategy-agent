@@ -5,30 +5,16 @@ Inventory generated at: 2026-06-14
 Datasets: 10
 Dashboards/cards: 10
 Total findings: 22
-- Critical: 2
+- Critical: 6
 - High: 12
-- Medium: 6
+- Medium: 2
 - Low: 2
 
-## Critical Findings
-- **LINT005: Sensitive dataset lacks stewardship**
-  - Affected: dataset `ds_exec_kpi` (Executive KPI Snapshot)
-  - Detail: Sensitive dataset has no steward or owner.
-  - Recommendation: Assign both an owner and a steward before broadening access or certification.
-- **LINT005: Sensitive dataset lacks stewardship**
-  - Affected: dataset `ds_hr_headcount` (Workforce Headcount Planning)
-  - Detail: Sensitive dataset has no steward or owner.
-  - Recommendation: Assign both an owner and a steward before broadening access or certification.
+## Policy Context
+Policy settings: config/sample_strategy_policy.yml
+Organization: Acme Enterprise
 
-## High Findings
-- **LINT002: Dataset owner is missing**
-  - Affected: dataset `ds_exec_kpi` (Executive KPI Snapshot)
-  - Detail: Dataset has no accountable business owner.
-  - Recommendation: Assign a business owner responsible for definitions, quality expectations, and escalation.
-- **LINT003: Dashboard or card owner is missing**
-  - Affected: dashboard `card_exec_scorecard` (Executive Scorecard)
-  - Detail: Dashboard/card has no accountable business owner.
-  - Recommendation: Assign a business owner who can approve definitions, certification, and remediation decisions.
+## Critical Findings
 - **LINT004: Executive dashboard uses uncertified datasets**
   - Affected: dashboard `card_board_pack` (Board Revenue Pack)
   - Detail: Executive dashboard is powered by uncertified datasets: Executive KPI Snapshot.
@@ -42,12 +28,46 @@ Total findings: 22
   - Detail: Sensitive dataset has no named steward.
   - Recommendation: Assign a data steward responsible for access, definitions, and quality expectations.
 - **LINT005: Sensitive dataset lacks stewardship**
+  - Affected: dataset `ds_exec_kpi` (Executive KPI Snapshot)
+  - Detail: Sensitive dataset has no steward or owner.
+  - Recommendation: Assign both an owner and a steward before broadening access or certification.
+- **LINT005: Sensitive dataset lacks stewardship**
+  - Affected: dataset `ds_hr_headcount` (Workforce Headcount Planning)
+  - Detail: Sensitive dataset has no steward or owner.
+  - Recommendation: Assign both an owner and a steward before broadening access or certification.
+- **LINT005: Sensitive dataset lacks stewardship**
   - Affected: dataset `ds_product_usage` (Product Usage Telemetry)
   - Detail: Sensitive dataset has no named steward.
   - Recommendation: Assign a data steward responsible for access, definitions, and quality expectations.
+
+## High Findings
+- **LINT002: Dataset owner is missing**
+  - Affected: dataset `ds_exec_kpi` (Executive KPI Snapshot)
+  - Detail: Dataset has no accountable business owner.
+  - Recommendation: Assign a business owner responsible for definitions, quality expectations, and escalation.
+- **LINT002: Dataset owner is missing**
+  - Affected: dataset `ds_hr_headcount` (Workforce Headcount Planning)
+  - Detail: Dataset has no accountable business owner.
+  - Recommendation: Assign a business owner responsible for definitions, quality expectations, and escalation.
+- **LINT006: Dataset is stale**
+  - Affected: dataset `ds_budget_plan` (Annual Budget Plan)
+  - Detail: Dataset last refreshed on 2026-01-31 is stale for its manual cadence.
+  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
+- **LINT006: Dataset is stale**
+  - Affected: dataset `ds_cs_health` (Customer Success Health Scores)
+  - Detail: Dataset last refreshed on 2026-05-20 is stale for its weekly cadence.
+  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 - **LINT006: Dataset is stale**
   - Affected: dataset `ds_exec_kpi` (Executive KPI Snapshot)
   - Detail: Dataset last refreshed on 2026-04-15 is stale for its manual cadence.
+  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
+- **LINT006: Dataset is stale**
+  - Affected: dataset `ds_hr_headcount` (Workforce Headcount Planning)
+  - Detail: Dataset last refreshed on 2026-03-31 is stale for its monthly cadence.
+  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
+- **LINT006: Dataset is stale**
+  - Affected: dataset `ds_product_usage` (Product Usage Telemetry)
+  - Detail: Dataset last refreshed on 2026-05-01 is stale for its daily cadence.
   - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 - **LINT006: Dataset is stale**
   - Affected: dataset `ds_sales_bookings` (Sales Bookings Pipeline)
@@ -71,30 +91,14 @@ Total findings: 22
   - Recommendation: Certify upstream datasets or remove dashboard certification until dependencies are trusted.
 
 ## Medium Findings
-- **LINT002: Dataset owner is missing**
-  - Affected: dataset `ds_hr_headcount` (Workforce Headcount Planning)
-  - Detail: Dataset has no accountable business owner.
-  - Recommendation: Assign a business owner responsible for definitions, quality expectations, and escalation.
+- **LINT003: Dashboard or card owner is missing**
+  - Affected: dashboard `card_exec_scorecard` (Executive Scorecard)
+  - Detail: Dashboard/card has no accountable business owner.
+  - Recommendation: Assign a business owner who can approve definitions, certification, and remediation decisions.
 - **LINT003: Dashboard or card owner is missing**
   - Affected: dashboard `dash_people_plan` (Workforce Planning Overview)
   - Detail: Dashboard/card has no accountable business owner.
   - Recommendation: Assign a business owner who can approve definitions, certification, and remediation decisions.
-- **LINT006: Dataset is stale**
-  - Affected: dataset `ds_budget_plan` (Annual Budget Plan)
-  - Detail: Dataset last refreshed on 2026-01-31 is stale for its manual cadence.
-  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
-- **LINT006: Dataset is stale**
-  - Affected: dataset `ds_cs_health` (Customer Success Health Scores)
-  - Detail: Dataset last refreshed on 2026-05-20 is stale for its weekly cadence.
-  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
-- **LINT006: Dataset is stale**
-  - Affected: dataset `ds_hr_headcount` (Workforce Headcount Planning)
-  - Detail: Dataset last refreshed on 2026-03-31 is stale for its monthly cadence.
-  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
-- **LINT006: Dataset is stale**
-  - Affected: dataset `ds_product_usage` (Product Usage Telemetry)
-  - Detail: Dataset last refreshed on 2026-05-01 is stale for its daily cadence.
-  - Recommendation: Refresh the dataset, correct the cadence metadata, or document why stale data is acceptable.
 
 ## Low Findings
 - **LINT009: High-row-count dataset has low usage**

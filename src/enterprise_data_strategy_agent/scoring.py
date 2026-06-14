@@ -6,10 +6,7 @@ from dataclasses import dataclass, field
 from datetime import date
 
 from enterprise_data_strategy_agent.config import (
-    CERTIFICATION_EXPECTED_FOR_CRITICAL_ASSETS,
-    CERTIFICATION_REQUIRED_DOMAINS,
     CRITICALITY_LEVELS,
-    DEFAULT_STALE_DAYS,
     EXECUTIVE_AUDIENCE_KEYWORDS,
     EXECUTIVE_DOMAINS,
     EXECUTIVE_REPORTING_RISK_WEIGHT,
@@ -19,12 +16,11 @@ from enterprise_data_strategy_agent.config import (
     GOVERNANCE_SENSITIVE_WITHOUT_STEWARD_PENALTY,
     GOVERNANCE_UNCERTIFIED_WEIGHT,
     HIGH_SENSITIVITY,
-    OVERALL_SCORE_WEIGHTS,
     OWNERSHIP_MISSING_OWNER_WEIGHT,
     OWNERSHIP_SENSITIVE_WITHOUT_STEWARD_PENALTY,
-    STALE_DAYS_BY_CADENCE,
     TRUST_SCORE_WEIGHTS,
 )
+from enterprise_data_strategy_agent.policy import DEFAULT_POLICY, StrategyPolicy
 from enterprise_data_strategy_agent.models import Dashboard, Dataset, Inventory
 
 
@@ -60,10 +56,11 @@ class ScoreExplanation:
     rationale: str = ""
 
 
-def is_stale(dataset: Dataset, as_of: date) -> bool:
+def is_stale(dataset: Dataset, as_of: date, policy: StrategyPolicy | None = None) -> bool:
     """Return True when a dataset is beyond the expected freshness window."""
 
-    threshold = STALE_DAYS_BY_CADENCE.get(dataset.refresh_cadence, DEFAULT_STALE_DAYS)
+    active_policy = policy or DEFAULT_POLICY
+    threshold = active_policy.freshness_thresholds.for_cadence(dataset.refresh_cadence)
     return (as_of - dataset.last_refreshed).days > threshold
 
 
@@ -73,21 +70,21 @@ def clamp(value: float) -> int:
     return max(0, min(100, round(value)))
 
 
-def calculate_scores(inventory: Inventory) -> HealthScores:
+def calculate_scores(inventory: Inventory, policy: StrategyPolicy | None = None) -> HealthScores:
     """Calculate enterprise strategy health scores from metadata signals."""
 
-    scores, _ = _calculate_scorecard(inventory)
+    scores, _ = _calculate_scorecard(inventory, policy or DEFAULT_POLICY)
     return scores
 
 
-def explain_scores(inventory: Inventory) -> dict[str, ScoreExplanation]:
+def explain_scores(inventory: Inventory, policy: StrategyPolicy | None = None) -> dict[str, ScoreExplanation]:
     """Calculate health scores and return detailed scoring explanations."""
 
-    _, explanations = _calculate_scorecard(inventory)
+    _, explanations = _calculate_scorecard(inventory, policy or DEFAULT_POLICY)
     return explanations
 
 
-def _calculate_scorecard(inventory: Inventory) -> tuple[HealthScores, dict[str, ScoreExplanation]]:
+def _calculate_scorecard(inventory: Inventory, policy: StrategyPolicy) -> tuple[HealthScores, dict[str, ScoreExplanation]]:
     datasets = inventory.datasets
     dashboards = inventory.dashboards
     assets = [*datasets, *dashboards]
@@ -98,7 +95,7 @@ def _calculate_scorecard(inventory: Inventory) -> tuple[HealthScores, dict[str, 
 
     uncertified = sum(_requires_certification(asset) and not asset.certified for asset in assets)
     missing_owners = sum(not asset.owner for asset in assets)
-    stale = sum(is_stale(dataset, inventory.generated_at) for dataset in datasets)
+    stale = sum(is_stale(dataset, inventory.generated_at, policy) for dataset in datasets)
     manual = sum(dataset.refresh_cadence == "manual" for dataset in datasets)
     sensitive_without_steward = sum(dataset.sensitivity_level in HIGH_SENSITIVITY and not dataset.steward for dataset in datasets)
 
@@ -111,7 +108,7 @@ def _calculate_scorecard(inventory: Inventory) -> tuple[HealthScores, dict[str, 
             not dashboard.certified
             or not dashboard.owner
             or bool(missing_dataset_ids)
-            or any(is_stale(dataset, inventory.generated_at) or not dataset.certified for dataset in related)
+            or any(is_stale(dataset, inventory.generated_at, policy) or (policy.risk_thresholds.high_criticality_requires_certified_sources and not dataset.certified) for dataset in related)
         ):
             risky_exec += 1
 
@@ -147,11 +144,11 @@ def _calculate_scorecard(inventory: Inventory) -> tuple[HealthScores, dict[str, 
     executive = _final_from_factors(100, executive_factors)
 
     overall_factors = [
-        ScoreFactor("Governance", governance * OVERALL_SCORE_WEIGHTS["governance"], "Governance controls certification and stewardship risk."),
-        ScoreFactor("Trust", trust * OVERALL_SCORE_WEIGHTS["trust"], "Trust combines governance, freshness, and ownership health."),
-        ScoreFactor("Freshness", freshness * OVERALL_SCORE_WEIGHTS["freshness"], "Freshness reflects stale-data exposure."),
-        ScoreFactor("Ownership", ownership * OVERALL_SCORE_WEIGHTS["ownership"], "Ownership reflects accountability coverage."),
-        ScoreFactor("Executive reporting risk", executive * OVERALL_SCORE_WEIGHTS["executive_reporting_risk"], "Executive reporting risk captures high-visibility dashboard exposure."),
+        ScoreFactor("Governance", governance * policy.scoring_weights.normalized()["governance"], f"Governance contributes {policy.scoring_weights.normalized()['governance']:.0%} of the overall score."),
+        ScoreFactor("Trust", trust * policy.scoring_weights.normalized()["trust"], f"Trust contributes {policy.scoring_weights.normalized()['trust']:.0%} of the overall score."),
+        ScoreFactor("Freshness", freshness * policy.scoring_weights.normalized()["freshness"], f"Freshness contributes {policy.scoring_weights.normalized()['freshness']:.0%} of the overall score."),
+        ScoreFactor("Ownership", ownership * policy.scoring_weights.normalized()["ownership"], f"Ownership contributes {policy.scoring_weights.normalized()['ownership']:.0%} of the overall score."),
+        ScoreFactor("Executive reporting risk", executive * policy.scoring_weights.normalized()["executive_reporting_risk"], f"Executive reporting risk contributes {policy.scoring_weights.normalized()['executive_reporting_risk']:.0%} of the overall score."),
     ]
     overall = _final_from_factors(0, overall_factors)
 
@@ -178,9 +175,7 @@ def _explain(score_name: str, base_score: float, factors: list[ScoreFactor], fin
 
 
 def _requires_certification(asset: Dataset | Dashboard) -> bool:
-    return asset.business_domain in CERTIFICATION_REQUIRED_DOMAINS or (
-        CERTIFICATION_EXPECTED_FOR_CRITICAL_ASSETS and asset.business_criticality in CRITICALITY_LEVELS
-    )
+    return asset.business_domain in {"Executive Reporting", "Finance"} or asset.business_criticality in CRITICALITY_LEVELS
 
 
 def _is_executive(dashboard: Dashboard) -> bool:

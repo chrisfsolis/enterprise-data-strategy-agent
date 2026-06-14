@@ -1,0 +1,58 @@
+organization:
+  name: Acme Enterprise
+  industry: SaaS and Digital Operations
+  data_maturity_stage: Governed self-service analytics
+  primary_platform: Domo
+  strategy_owner_role: Enterprise Data Manager
+
+freshness_thresholds:
+  daily_dataset_stale_after_days: 2
+  weekly_dataset_stale_after_days: 10
+  monthly_dataset_stale_after_days: 35
+  manual_dataset_review_after_days: 14
+
+usage_thresholds:
+  high_row_count_threshold: 750000
+  low_usage_threshold: 10
+  high_usage_threshold: 100
+
+risk_thresholds:
+  executive_dashboard_minimum_certification_required: true
+  sensitive_data_requires_owner: true
+  sensitive_data_requires_steward: true
+  high_criticality_requires_certified_sources: true
+
+scoring_weights:
+  governance: 0.30
+  trust: 0.25
+  freshness: 0.20
+  ownership: 0.15
+  executive_reporting_risk: 0.10
+
+severity_overrides:
+  missing_dataset_reference: critical
+  missing_dataset_owner: high
+  missing_dashboard_owner: medium
+  executive_dashboard_uncertified_source: critical
+  sensitive_dataset_without_owner: critical
+  stale_dataset: high
+  manual_refresh_high_criticality: high
+  duplicate_metric: medium
+  orphan_dataset: low
+  dashboard_without_datasets: medium
+
+trusted_data_product_domains:
+  - Executive Reporting
+  - Finance
+  - Sales
+  - Customer Success
+  - Operations
+
+stakeholder_roles:
+  - Enterprise Data Manager
+  - Domo Admin
+  - Finance Leader
+  - Sales Operations Leader
+  - Customer Success Operations Leader
+  - Data Governance Owner
+  - Security or Compliance Partner

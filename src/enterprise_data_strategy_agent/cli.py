@@ -13,6 +13,7 @@ from enterprise_data_strategy_agent.analyzer import AnalysisResult, analyze_inve
 from enterprise_data_strategy_agent.connectors.domo_mock import DomoMockConnector
 from enterprise_data_strategy_agent.linting import generate_markdown_lint_report, lint_inventory
 from enterprise_data_strategy_agent.models import Inventory
+from enterprise_data_strategy_agent.policy import StrategyPolicy, load_policy
 from enterprise_data_strategy_agent.report import generate_markdown_report
 
 DEFAULT_INPUT_PATH = Path("data/sample_domo_inventory.json")
@@ -30,6 +31,7 @@ def build_parser() -> argparse.ArgumentParser:
     analyze.add_argument("--output", default=str(DEFAULT_OUTPUT_PATH), help=f"Path to write the analysis output (default: {DEFAULT_OUTPUT_PATH})")
     analyze.add_argument("--format", choices=("markdown", "json"), default="markdown", help="Analysis output format (default: markdown)")
     analyze.add_argument("--print-summary", action="store_true", help="Print top risks and health scores to stdout")
+    analyze.add_argument("--config", help="Optional strategy policy YAML file")
 
     validate = subparsers.add_parser("validate", help="Validate and lint an inventory without generating a strategy brief")
     validate.add_argument("--input", default=str(DEFAULT_INPUT_PATH), help=f"Path to synthetic inventory JSON (default: {DEFAULT_INPUT_PATH})")
@@ -38,6 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
     lint = subparsers.add_parser("lint", help="Run advisory metadata quality and governance lint checks")
     lint.add_argument("--input", default=str(DEFAULT_INPUT_PATH), help=f"Path to synthetic inventory JSON (default: {DEFAULT_INPUT_PATH})")
     lint.add_argument("--output", help="Optional path to write a markdown lint report")
+    lint.add_argument("--config", help="Optional strategy policy YAML file")
     return parser
 
 
@@ -50,9 +53,13 @@ def main(argv: list[str] | None = None) -> int:
         if inventory is None:
             return 2
 
-        analysis = analyze_inventory(inventory)
+        policy = _load_policy(args.config)
+        if policy is None:
+            return 2
+
+        analysis = analyze_inventory(inventory, policy)
         output_path = Path(args.output)
-        output = _format_analysis(inventory, analysis, args.format)
+        output = _format_analysis(inventory, analysis, args.format, policy)
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(output, encoding="utf-8")
         print(f"Enterprise data strategy {args.format} output generated: {output_path}")
@@ -65,7 +72,11 @@ def main(argv: list[str] | None = None) -> int:
         if inventory is None:
             return 2
 
-        findings = lint_inventory(inventory)
+        policy = _load_policy(args.config)
+        if policy is None:
+            return 2
+
+        findings = lint_inventory(inventory, policy)
         print(f"Inventory structural validation passed: {args.input}")
         print(f"Datasets: {len(inventory.datasets)}")
         print(f"Dashboards/cards: {len(inventory.dashboards)}")
@@ -73,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
         if args.output:
             output_path = Path(args.output)
             output_path.parent.mkdir(parents=True, exist_ok=True)
-            output_path.write_text(generate_markdown_lint_report(inventory, findings), encoding="utf-8")
+            output_path.write_text(generate_markdown_lint_report(inventory, findings, policy), encoding="utf-8")
             print(f"Metadata lint report generated: {output_path}")
         return 0
 
@@ -94,6 +105,16 @@ def main(argv: list[str] | None = None) -> int:
     return 1
 
 
+
+def _load_policy(config_path: str | None) -> StrategyPolicy | None:
+    """Load policy config and print friendly CLI errors."""
+
+    try:
+        return load_policy(config_path)
+    except (OSError, ValueError) as exc:
+        print(f"Error: strategy policy config failed for {config_path}: {exc}", file=sys.stderr)
+        return None
+
 def _load_inventory(input_path: Path) -> Inventory | None:
     """Load an inventory and print friendly CLI errors for common failures."""
 
@@ -113,7 +134,7 @@ def _load_inventory(input_path: Path) -> Inventory | None:
     return None
 
 
-def _format_analysis(inventory: Inventory, analysis: AnalysisResult, output_format: str) -> str:
+def _format_analysis(inventory: Inventory, analysis: AnalysisResult, output_format: str, policy: StrategyPolicy | None = None) -> str:
     if output_format == "json":
         return json.dumps(
             {
@@ -125,7 +146,7 @@ def _format_analysis(inventory: Inventory, analysis: AnalysisResult, output_form
             },
             indent=2,
         )
-    return generate_markdown_report(inventory, analysis)
+    return generate_markdown_report(inventory, analysis, policy)
 
 
 def _print_summary(analysis: AnalysisResult) -> None:

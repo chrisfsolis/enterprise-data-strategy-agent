@@ -26,3 +26,16 @@ A lightweight Streamlit or web UI could let users upload inventory files, review
 
 ## Future AI assistant layer
 An AI layer could help users ask natural-language questions about risks, definitions, and remediation plans while grounding answers in metadata findings.
+
+## Configurable Strategy Policy Layer
+
+The policy layer sits between raw metadata ingestion and advisory outputs. `src/enterprise_data_strategy_agent/policy.py` defines typed defaults and loads optional YAML policy files. The CLI passes the loaded policy into analysis, scoring, linting, and markdown report generation so the same metadata can be evaluated against organization-specific expectations.
+
+Policy-aware components include:
+
+- **Analyzer**: uses policy-aware freshness checks, lint findings, trusted data product domains, and stakeholder roles.
+- **Scoring engine**: uses configured freshness thresholds and adjustable overall scoring weights.
+- **Linting engine**: uses configured stale-data windows, high-row-count thresholds, and severity overrides.
+- **Reports**: include policy context so readers know whether default or organization-specific assumptions were applied.
+
+If no `--config` argument is provided, the agent uses built-in defaults to preserve backward-compatible behavior for demos and existing automation.

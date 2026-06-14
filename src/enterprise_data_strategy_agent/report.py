@@ -4,13 +4,15 @@ from __future__ import annotations
 
 from enterprise_data_strategy_agent.analyzer import AnalysisResult
 from enterprise_data_strategy_agent.models import Inventory
+from enterprise_data_strategy_agent.policy import DEFAULT_POLICY, StrategyPolicy
 
 DISCLAIMER = "This project is independent and is not affiliated with, endorsed by, or sponsored by Domo. Domo-style metadata is used only as the first reference implementation."
 
 
-def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult) -> str:
+def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult, policy: StrategyPolicy | None = None) -> str:
     """Generate a consultant-style enterprise data strategy brief."""
 
+    active_policy = policy or DEFAULT_POLICY
     s = analysis.scores
     lines = [
         "# Enterprise Data Strategy Brief",
@@ -20,6 +22,9 @@ def generate_markdown_report(inventory: Inventory, analysis: AnalysisResult) -> 
         "",
         "## Platform Context",
         f"This version analyzes synthetic metadata from the {inventory.platform} for datasets, cards, dashboards, owners, certification, calculated metrics, sensitivity, usage, and refresh patterns. {DISCLAIMER}",
+        "",
+        "## Strategy Policy Context",
+        *_policy_context_lines(active_policy),
         "",
         "## Health Scores",
         *_score_lines(analysis),
@@ -121,4 +126,17 @@ def _lint_detail_lines(analysis: AnalysisResult) -> list[str]:
     return [
         f"- **{finding.severity.upper()} {finding.rule_id}** {finding.affected_object_type} `{finding.affected_object_id}`: {finding.description} Recommended action: {finding.recommendation}"
         for finding in analysis.lint_findings
+    ]
+
+
+def _policy_context_lines(policy: StrategyPolicy) -> list[str]:
+    source = policy.source_path or "Default policy settings"
+    return [
+        f"- Organization name: {policy.organization.name}",
+        f"- Industry: {policy.organization.industry}",
+        f"- Data maturity stage: {policy.organization.data_maturity_stage}",
+        f"- Primary platform: {policy.organization.primary_platform}",
+        f"- Strategy owner role: {policy.organization.strategy_owner_role}",
+        f"- Policy source: {source}",
+        f"- Major assumptions: daily datasets stale after {policy.freshness_thresholds.daily_dataset_stale_after_days} days; weekly after {policy.freshness_thresholds.weekly_dataset_stale_after_days} days; monthly after {policy.freshness_thresholds.monthly_dataset_stale_after_days} days; manual datasets reviewed after {policy.freshness_thresholds.manual_dataset_review_after_days} days; high-row-count datasets start at {policy.usage_thresholds.high_row_count_threshold:,} rows; executive certification required is {policy.risk_thresholds.executive_dashboard_minimum_certification_required}.",
     ]

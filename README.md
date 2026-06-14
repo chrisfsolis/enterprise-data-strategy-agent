@@ -135,3 +135,48 @@ All sample data is synthetic and intentionally includes governance and reporting
 ## License
 
 MIT License. See [LICENSE](LICENSE).
+
+## Strategy Policy Configuration
+
+Strategy policy configuration matters because governance expectations are not universal. A startup, regulated enterprise, finance team, and operations team may all disagree on what counts as stale data, when certification is mandatory, who must own sensitive data, and how much executive-reporting risk is acceptable. The optional policy file moves those assumptions out of code and into a YAML file that an enterprise data manager can review and tune.
+
+Run analysis with a policy file:
+
+```bash
+enterprise-data-strategy-agent analyze \
+  --input data/sample_domo_inventory.json \
+  --output examples/generated_strategy_brief.md \
+  --config config/sample_strategy_policy.yml
+```
+
+Run metadata linting with the same policy file:
+
+```bash
+enterprise-data-strategy-agent lint \
+  --input data/sample_domo_inventory.json \
+  --output examples/generated_lint_report.md \
+  --config config/sample_strategy_policy.yml
+```
+
+Example policy snippet:
+
+```yaml
+organization:
+  name: Acme Enterprise
+  industry: SaaS and Digital Operations
+  data_maturity_stage: Governed self-service analytics
+  primary_platform: Domo
+  strategy_owner_role: Enterprise Data Manager
+
+freshness_thresholds:
+  daily_dataset_stale_after_days: 2
+  weekly_dataset_stale_after_days: 10
+  monthly_dataset_stale_after_days: 35
+  manual_dataset_review_after_days: 14
+
+severity_overrides:
+  stale_dataset: high
+  executive_dashboard_uncertified_source: critical
+```
+
+Different organizations may have different freshness, certification, ownership, sensitivity, and reporting-risk expectations. Use `config/sample_strategy_policy.yml` as a starting point and adjust thresholds, scoring weights, severity overrides, trusted data product domains, and stakeholder roles to match your operating model.

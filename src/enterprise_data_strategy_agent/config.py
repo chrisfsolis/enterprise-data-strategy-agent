@@ -1,4 +1,8 @@
-"""Shared configuration constants for the strategy analyzer."""
+"""Shared configuration constants for the strategy analyzer.
+
+Backwards-compatible constants remain here for legacy callers; configurable
+organization policy is defined in :mod:`enterprise_data_strategy_agent.policy`.
+"""
 
 STALE_DAYS_BY_CADENCE = {
     "hourly": 2,
