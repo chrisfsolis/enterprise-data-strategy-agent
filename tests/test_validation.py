@@ -114,3 +114,75 @@ def test_structural_parser_allows_missing_row_count_for_linting():
 
     assert inventory.datasets[0].row_count is None
     assert any("row count is missing" in finding.message for finding in lint_inventory(inventory))
+
+
+def _minimal_inventory_payload():
+    return {
+        "platform": "test",
+        "generated_at": "2026-06-14",
+        "datasets": [
+            {
+                "id": "ds_valid",
+                "name": "Valid Dataset",
+                "business_domain": "Finance",
+                "owner": "Owner",
+                "department": "Finance",
+                "refresh_cadence": "daily",
+                "last_refreshed": "2026-06-14",
+                "certified": True,
+                "row_count": 100,
+                "sensitivity_level": "internal",
+                "usage_level": "low",
+                "business_criticality": "medium",
+            }
+        ],
+        "dashboards": [
+            {
+                "id": "dash_valid",
+                "title": "Valid Dashboard",
+                "type": "dashboard",
+                "business_domain": "Finance",
+                "owner": "Owner",
+                "department": "Finance",
+                "certified": True,
+                "usage_level": "low",
+                "business_criticality": "medium",
+                "dataset_ids": ["ds_valid"],
+                "audience": "Finance",
+                "last_viewed": "2026-06-14",
+            }
+        ],
+    }
+
+
+def test_validate_inventory_payload_rejects_null_generated_at():
+    payload = _minimal_inventory_payload()
+    payload["generated_at"] = None
+
+    try:
+        validate_inventory_payload(payload)
+    except ValueError as exc:
+        assert "generated_at must be a non-empty string" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for null generated_at")
+
+
+def test_validate_inventory_payload_rejects_null_dataset_last_refreshed():
+    payload = _minimal_inventory_payload()
+    payload["datasets"][0]["last_refreshed"] = None
+
+    try:
+        validate_inventory_payload(payload)
+    except ValueError as exc:
+        assert "last_refreshed must be a non-empty string" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for null dataset last_refreshed")
+
+
+def test_validate_inventory_payload_allows_null_dashboard_last_viewed():
+    payload = _minimal_inventory_payload()
+    payload["dashboards"][0]["last_viewed"] = None
+
+    inventory = validate_inventory_payload(payload)
+
+    assert inventory.dashboards[0].last_viewed is None

@@ -72,6 +72,12 @@ def _parse_date(value: str | None) -> date | None:
     return date.fromisoformat(value)
 
 
+def _require_non_empty_string(value: Any, field_name: str) -> str:
+    if not isinstance(value, str) or not value:
+        raise ValueError(f"{field_name} must be a non-empty string")
+    return value
+
+
 def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
     """Validate and convert a raw inventory JSON payload into typed models."""
 
@@ -82,8 +88,11 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
     if not isinstance(payload["datasets"], list) or not isinstance(payload["dashboards"], list):
         raise ValueError("Inventory datasets and dashboards must be lists")
 
+    generated_at = _require_non_empty_string(payload["generated_at"], "generated_at")
+
     datasets: list[Dataset] = []
     for raw in payload["datasets"]:
+        last_refreshed = _require_non_empty_string(raw["last_refreshed"], "last_refreshed")
         metrics = [CalculatedMetric(**metric) for metric in raw.get("calculated_metrics", [])]
         datasets.append(
             Dataset(
@@ -93,7 +102,7 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
                 owner=raw.get("owner"),
                 department=raw["department"],
                 refresh_cadence=raw["refresh_cadence"].lower(),
-                last_refreshed=_parse_date(raw["last_refreshed"]),  # type: ignore[arg-type]
+                last_refreshed=_parse_date(last_refreshed),  # type: ignore[arg-type]
                 certified=bool(raw["certified"]),
                 row_count=int(raw["row_count"]) if raw.get("row_count") is not None else None,
                 sensitivity_level=raw["sensitivity_level"].lower(),
@@ -130,7 +139,7 @@ def validate_inventory_payload(payload: dict[str, Any]) -> Inventory:
 
     return Inventory(
         platform=payload["platform"],
-        generated_at=_parse_date(payload["generated_at"]),  # type: ignore[arg-type]
+        generated_at=_parse_date(generated_at),  # type: ignore[arg-type]
         datasets=datasets,
         dashboards=dashboards,
     )
